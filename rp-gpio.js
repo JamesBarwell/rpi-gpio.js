@@ -1,122 +1,156 @@
-var fs = require('fs'),
-    util = require('util');
-
-var PATH = '/sys/class/gpio';
+var fs     = require('fs'),
+    path   = require('path'),
+    events = require('events'),
+    util   = require('util');
 
 var logError = function(err) { if(err) util.debug(err); };
 
-// @todo Add full set of usable pins
-var pinMap = {
-    '0': 17,
-    '1': 18,
-    '2': 21,
-    '3': 22,
-    '4': 23,
-    '5': 24,
-    '6': 25,
-    '7': 4
-};
-
-var modes = {
+// Constants
+var PATH = '/sys/class/gpio',
+    PIN_MAP = {
+        // RPi to BCM
+        // @todo Map any other useful pins
+        '0': 17,
+        '1': 18,
+        '2': 21,
+        '3': 22,
+        '4': 23,
+        '5': 24,
+        '6': 25,
+        '7': 4
+    },
+    MODE = {
         rpi: 'rpi',
         bcm: 'bcm'
     },
-    defaultMode = modes.rpi,
-    directions = {
-        'input':  'in',
-        'output': 'out'
-    }
+    DIRECTION = {
+        'in':  'in',
+        'out': 'out'
+    };
+
+exports.MODE      = MODE;
+exports.DIRECTION = DIRECTION;
+
+_write = function(path, value, cb) {
+    fs.writeFile(path, value, cb);
+}
+
+// Settings
+var activeMode = MODE.rpi;
+var openPins = [];
+
+// Clean up on shutdown
+// @todo this currently fails to destroy the symlink
+process.on('exit', function () {
+    destroy();
+});
 
 exports.setMode = setMode;
 function setMode(mode) {
-    if (mode in modes) {
-        throw new Error('Invalid mode');
+    if (!(mode in MODE)) {
+        throw new Error('Cannot set invalid mode [' + mode + ']');
     }
-    defaultMode = mode;
-};
+    activeMode = mode;
+}
 
 exports.setup = setup;
 function setup(channel, direction, cb) {
-
-    if (undefined === direction && cb) {
-        cb = direction;
-        direction = directions.input;
-    }
-
-    // @todo validation here please
     if (!channel) {
-        throw new Error('Invalid channel');
+        throw new Error('Channel not specified');
     }
-    if (!(direction in directions)) {
-        throw new Error('Invalid direction');
+    if (direction && !(direction in DIRECTION)) {
+        throw new Error('Cannot set invalid direction [' + direction + ']');
     }
+    direction = direction || DIRECTION.out;
 
-    direction = directions[direction];
-
-    // @todo if it exists, unexport it first
-
-    // export it, write direction then trigger callback
-    _export(channel, function(normalChannel) {
-        fs.writeFile(PATH + '/gpio' + normalChannel + '/direction', direction, function(err) {
-            if (err) logError(err);
-            cb();
+    var doExport = function() {
+        exportChannel(channel, function() {
+            setDirection(channel, direction, cb);
         });
+    }
+
+    // Unexport channel if already open
+    isExported(channel, function(isOpen) {
+        if (isOpen) {
+            unexportChannel(channel, doExport);
+        } else {
+            doExport();
+        }
     });
+}
 
-};
-
-/**
- * Write to the channel
- */
-exports.output = output;
-function output(channel, value, cb) {
-    channel = _getChannel(channel);
+exports.write = exports.output = write;
+function write(channel, value, cb) {
+    var pin = getPin(channel);
     value = (!!value) ? '1' : '0';
-    fs.writeFile(PATH + '/gpio' + channel + '/value', value, function(err) {
+    _write(PATH + '/gpio' + pin + '/value', value, function(err) {
         console.log('Output ' + channel + ' set to ' + value);
         if (err) logError(err);
         if (cb) cb();
     });
 };
 
-/**
- * Read from the channel
- */
-exports.input = input;
-function input(channel, cb) {
-    channel = _getChannel(channel);
-	fs.readFile(PATH = '/gpio' + channel, 'utf-8', function(err, data) {
+exports.read = exports.input = read;
+function read(channel, cb) {
+    var pin = getPin(channel);
+	fs.readFile(PATH = '/gpio' + pin, 'utf-8', function(err, data) {
 		if (err) logError(err);
         if (cb) cb(data);
 	});
 }
 
-// @todo need to clean up on destruct
-exports.unexport = _unexport;
-function _unexport(channel, cb) {
-    channel = _getChannel(channel);
-    fs.writeFile(PATH + '/unexport', channel, function(err) {
+function setDirection(channel, direction, cb) {
+    if (!(direction in DIRECTION)) {
+        throw new Error('Cannot set invalid direction [' + direction + ']');
+    }
+    var pin = getPin(channel);
+    _write(PATH + '/gpio' + pin + '/direction', direction, function(err) {
         if (err) logError(err);
         if (cb) cb();
     });
 }
 
-function _export(channel, cb) {
-    channel = _getChannel(channel);
-    fs.writeFile(PATH + '/export', channel, function(err) {
+function exportChannel(channel, cb) {
+    var pin = getPin(channel);
+    _write(PATH + '/export', pin, function(err) {
         if (err) logError(err);
-        if (cb) cb(channel);
+        openPins.push(pin);
+        if (cb) cb();
     });
 }
 
-function _getChannel(channel) {
-    if (defaultMode === modes.rpi) {
-        return pinMap[parseInt(channel, 10)];
+// Expose this until the destructor works reliably
+exports.unexportChannel = unexportChannel;
+function unexportChannel(channel, cb) {
+    unexportPin(getPin(channel), cb);
+}
+
+function unexportPin(pin, cb) {
+    _write(PATH + '/unexport', pin, function(err) {
+        if (err) logError(err);
+        if (cb) cb();
+    });
+}
+
+function isExported(channel, cb) {
+    var pin = getPin(channel);
+    path.exists(PATH + '/gpio' + pin, function(exists) {
+        if (cb) cb(exists);
+    });
+}
+
+function getPin(channel) {
+    var pin = channel;
+    if (activeMode === MODE.rpi) {
+        pin = PIN_MAP[channel];
     }
-    if (pinMap.indexOf(channel) !== -1) {
-        return channel;
-    }
-    throw new Error(
-        'Invalid channel [' + channel + ']. Check that you are in the correct mode.'
-    );
+    //@todo validate this properly
+
+    return pin;
+}
+
+function destroy() {
+    openPins.forEach(function(pin) {
+        unexportPin(pin);
+    });
 }
