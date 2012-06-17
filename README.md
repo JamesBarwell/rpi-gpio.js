@@ -4,30 +4,36 @@ rp-gpio.js
 
 Control Raspberry Pi GPIO pins
 
+### Setup
+See this guide on how to get [node.js running on Raspberry Pi](http://elsmorian.com/post/23474168753/node-js-on-raspberry-pi)
+
 ### Example
 Voltage cycling on RPi GPIO #7 (or BCM GPIO #4)
 ```js
-var gpio = require('./rp-gpio');
+var gpio = new require('./rp-gpio');
 
-var pin = 7;
+var pin   = 7;
+var delay = 3000;
+var count = 0;
+var max   = 3;
 
-gpio.setup(pin, 'output', flip);
+gpio.setup(pin, 'out', on);
 
-var on = true;
+function on() {
+    if (count >= max) {
+        process.exit(0);
+        return;
+    }
 
-function flip() {
-    setInterval(function() {
-        if (on) {
-            gpio.output(pin, 0);
-        } else {
-            gpio.output(pin, 1);
-        }
-        on = !on;
-    }, 2000);
+    setTimeout(function() {
+        gpio.write(pin, 1, off);
+        count += 1;
+    }, delay);
 }
 
-// Cleanup must be done manually for now
-function cleanup() {
-    gpio.unexport(7);
+function off() {
+    setTimeout(function() {
+        gpio.write(pin, 0, on);
+    }, delay);
 }
 ```
