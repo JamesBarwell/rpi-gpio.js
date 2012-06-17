@@ -6,8 +6,8 @@ var fs     = require('fs'),
 var logError = function(err) { if(err) util.debug(err); };
 
 // Constants
-var PATH = '/sys/class/gpio',
-    PIN_MAP = {
+var PATH     = '/sys/class/gpio',
+    PIN_MAP  = {
         // RPi to BCM
         '1':  null,
         '2':  null,
@@ -138,10 +138,10 @@ Gpio.prototype.output = Gpio.prototype.write;
  */
 Gpio.prototype.read = function(channel, cb /*value*/) {
     var pin = getPin(channel);
-	fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
-		if (err) logError(err);
+    fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
+        if (err) logError(err);
         cb(data);
-	});
+    });
 }
 Gpio.prototype.input = Gpio.prototype.read;
 
