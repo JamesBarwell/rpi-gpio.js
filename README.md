@@ -2,7 +2,7 @@ rp-gpio.js
 ==========
 
 
-Control Raspberry Pi GPIO pins
+Control Raspberry Pi GPIO pins with node.js
 
 ### Setup
 See this guide on how to get [node.js running on Raspberry Pi](http://elsmorian.com/post/23474168753/node-js-on-raspberry-pi)

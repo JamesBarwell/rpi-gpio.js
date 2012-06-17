@@ -1,6 +1,5 @@
 var fs     = require('fs'),
     path   = require('path'),
-    events = require('events'),
     util   = require('util');
 
 var logError = function(err) { if(err) util.debug(err); };
@@ -63,7 +62,7 @@ function setup(channel, direction, cb) {
     }
     direction = direction || DIRECTION.out;
 
-    var doExport = function() {
+    function doExport() {
         exportChannel(channel, function() {
             setDirection(channel, direction, cb);
         });
