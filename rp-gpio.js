@@ -19,21 +19,17 @@ var PATH = '/sys/class/gpio',
         '6': 25,
         '7': 4
     },
-    MODE = {
-        rpi: 'rpi',
-        bcm: 'bcm'
-    },
-    DIRECTION = {
-        'in':  'in',
-        'out': 'out'
-    };
+    MODE_RPI = 'rpi',
+    MODE_BCM = 'bcm',
+    DIR_IN   = 'in',
+    DIR_OUT  = 'out';
 
 var _write = function(path, value, cb) {
     fs.writeFile(path, value, cb);
 }
 
 // Keep track of mode and exported pins
-var activeMode = MODE.rpi;
+var activeMode = MODE_RPI;
 var exportedPins = [];
 
 // Clean up on shutdown
@@ -47,8 +43,10 @@ function Gpio() { }
 Gpio.prototype = Object.create(EventEmitter.prototype);
 
 // Expose these constants
-Gpio.prototype.MODE      = MODE;
-Gpio.prototype.DIRECTION = DIRECTION;
+Gpio.prototype.MODE_RPI = MODE_RPI;
+Gpio.prototype.MODE_BCM = MODE_BCM;
+Gpio.prototype.DIR_IN   = DIR_IN;
+Gpio.prototype.DIR_OUT  = DIR_OUT;
 
 /**
  * Set pin reference mode. Defaults to 'rpi'.
@@ -56,7 +54,7 @@ Gpio.prototype.DIRECTION = DIRECTION;
  * @param {string} mode Pin reference mode, 'rpi' or 'bcm'
  */
 Gpio.prototype.setMode = function(mode) {
-    if (!(mode in MODE)) {
+    if (mode !== MODE_RPI && mode !== MODE_BCM) {
         throw new Error('Cannot set invalid mode [' + mode + ']');
     }
     activeMode = mode;
@@ -72,9 +70,6 @@ Gpio.prototype.setMode = function(mode) {
 Gpio.prototype.setup = function(channel, direction, cb) {
     if (!channel) {
         throw new Error('Channel not specified');
-    }
-    if (direction && !(direction in this.DIRECTION)) {
-        throw new Error('Cannot set invalid direction [' + direction + ']');
     }
     direction = direction || this.DIRECTION.out;
 
@@ -134,7 +129,7 @@ Gpio.prototype.read = function(channel, cb /*value*/) {
 Gpio.prototype.input = Gpio.prototype.read;
 
 function setDirection(channel, direction, cb) {
-    if (!(direction in DIRECTION)) {
+    if (direction !== DIR_IN && direction !== DIR_OUT) {
         throw new Error('Cannot set invalid direction [' + direction + ']');
     }
     var pin = getPin(channel);
@@ -176,7 +171,7 @@ function isExported(channel, cb) {
 
 function getPin(channel) {
     var pin = channel;
-    if (activeMode === MODE.rpi) {
+    if (activeMode === MODE_RPI) {
         pin = PIN_MAP[channel];
     }
     //@todo validate this properly
