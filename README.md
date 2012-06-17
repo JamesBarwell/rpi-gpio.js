@@ -65,13 +65,14 @@ function off() {
 ```
 
 ### Querying a pin in BCM mode
+This queries the same physical pin as in the previous examples.
 ```js
 var gpio = require('./rp-gpio');
 
 gpio.setMode(gpio.MODE_BCM);
 gpio.setup(4, gpio.DIR_IN);
 
-gpio.read(4444, function(value) {
+gpio.read(4, function(value) {
     console.log('The value is ' + value);
 });
 ```
