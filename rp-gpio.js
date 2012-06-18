@@ -48,8 +48,8 @@ var activeMode = MODE_RPI;
 var exportedPins = [];
 
 // Constructor
-function Gpio() { }
-Gpio.prototype = Object.create(EventEmitter.prototype);
+function Gpio() { EventEmitter.call(this); }
+util.inherits(Gpio, EventEmitter);
 
 // Expose these constants
 Gpio.prototype.MODE_RPI = MODE_RPI;
