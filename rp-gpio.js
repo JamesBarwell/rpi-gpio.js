@@ -39,10 +39,6 @@ var PATH     = '/sys/class/gpio',
     DIR_IN   = 'in',
     DIR_OUT  = 'out';
 
-var _write = function(path, value, cb) {
-    fs.writeFile(path, value, cb);
-}
-
 // Keep track of mode and exported pins
 var activeMode = MODE_RPI;
 var exportedPins = [];
@@ -114,7 +110,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
 Gpio.prototype.write = function(channel, value, cb /*err*/ ) {
     var pin = getPin(channel);
     value = (!!value) ? '1' : '0';
-    _write(PATH + '/gpio' + pin + '/value', value, function(err) {
+    fs.writeFile(PATH + '/gpio' + pin + '/value', value, function(err) {
         if (cb) return cb(err);
     }.bind(this));
 };
@@ -129,11 +125,14 @@ Gpio.prototype.output = Gpio.prototype.write;
 Gpio.prototype.read = function(channel, cb /*err,value*/) {
     var pin = getPin(channel);
     fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
-        cb(err, data);
+        return cb(err, data);
     });
 }
 Gpio.prototype.input = Gpio.prototype.read;
 
+/**
+ * Unexport any open pins
+ */
 Gpio.prototype.destroy = function() {
     exportedPins.forEach(function(pin) {
         unexportPin(pin);
@@ -145,14 +144,14 @@ function setDirection(channel, direction, cb) {
         return cb(new Error('Cannot set invalid direction [' + direction + ']'));
     }
     var pin = getPin(channel);
-    _write(PATH + '/gpio' + pin + '/direction', direction, function(err) {
+    fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
         if (cb) return cb(err);
     });
 }
 
 function exportChannel(channel, cb) {
     var pin = getPin(channel);
-    _write(PATH + '/export', pin, function(err) {
+    fs.writeFile(PATH + '/export', pin, function(err) {
         if (!err) {
             exportedPins.push(pin);
         }
@@ -167,7 +166,7 @@ function unexportChannel(channel, cb) {
 }
 
 function unexportPin(pin, cb) {
-    _write(PATH + '/unexport', pin, function(err) {
+    fs.writeFile(PATH + '/unexport', pin, function(err) {
         if (cb) return cb(err);
     });
 }
@@ -175,7 +174,7 @@ function unexportPin(pin, cb) {
 function isExported(channel, cb) {
     var pin = getPin(channel);
     path.exists(PATH + '/gpio' + pin, function(exists) {
-        if (cb) cb(exists);
+        if (cb) return cb(exists);
     });
 }
 
