@@ -3,8 +3,6 @@ var fs     = require('fs'),
     util   = require('util'),
     EventEmitter = require('events').EventEmitter;
 
-var logError = function(err) { if(err) util.debug(err); };
-
 // Constants
 var PATH     = '/sys/class/gpio',
     PIN_MAP  = {
@@ -49,12 +47,6 @@ var _write = function(path, value, cb) {
 var activeMode = MODE_RPI;
 var exportedPins = [];
 
-// Clean up on shutdown
-// @todo this currently fails to destroy the symlink
-process.on('exit', function () {
-    destroy();
-});
-
 // Constructor
 function Gpio() { }
 Gpio.prototype = Object.create(EventEmitter.prototype);
@@ -84,9 +76,9 @@ Gpio.prototype.setMode = function(mode) {
  * @param {string}   direction The pin direction, either 'in' or 'out'
  * @param {function} cb        Optional callback
  */
-Gpio.prototype.setup = function(channel, direction, cb) {
+Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     if (!channel) {
-        throw new Error('Channel not specified');
+        return cb(new Error('Channel not specified'));
     }
     direction = direction || this.DIRECTION.out;
 
@@ -105,7 +97,7 @@ Gpio.prototype.setup = function(channel, direction, cb) {
     // Unexport channel if already open
     isExported(channel, function(isOpen) {
         if (isOpen) {
-            this.unexportChannel(channel, doExport);
+            unexportChannel(channel, doExport);
         } else {
             doExport();
         }
@@ -119,13 +111,11 @@ Gpio.prototype.setup = function(channel, direction, cb) {
  * @param {boolean}  value   If true, turns the channel on, else turns off
  * @param {function} cb      Optional callback
  */
-Gpio.prototype.write = function(channel, value, cb) {
+Gpio.prototype.write = function(channel, value, cb /*err*/ ) {
     var pin = getPin(channel);
     value = (!!value) ? '1' : '0';
     _write(PATH + '/gpio' + pin + '/value', value, function(err) {
-        console.log('Output ' + channel + ' set to ' + value);
-        if (err) logError(err);
-        if (cb) cb();
+        if (cb) return cb(err);
     }.bind(this));
 };
 Gpio.prototype.output = Gpio.prototype.write;
@@ -136,37 +126,41 @@ Gpio.prototype.output = Gpio.prototype.write;
  * @param {number}   channel The channel to read from
  * @param {function} cb      Callback which receives the channel's value
  */
-Gpio.prototype.read = function(channel, cb /*value*/) {
+Gpio.prototype.read = function(channel, cb /*err,value*/) {
     var pin = getPin(channel);
     fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
-        if (err) logError(err);
-        cb(data);
+        cb(err, data);
     });
 }
 Gpio.prototype.input = Gpio.prototype.read;
 
+Gpio.prototype.destroy = function() {
+    exportedPins.forEach(function(pin) {
+        unexportPin(pin);
+    });
+}
+
 function setDirection(channel, direction, cb) {
     if (direction !== DIR_IN && direction !== DIR_OUT) {
-        throw new Error('Cannot set invalid direction [' + direction + ']');
+        return cb(new Error('Cannot set invalid direction [' + direction + ']'));
     }
     var pin = getPin(channel);
     _write(PATH + '/gpio' + pin + '/direction', direction, function(err) {
-        if (err) logError(err);
-        if (cb) cb();
+        if (cb) return cb(err);
     });
 }
 
 function exportChannel(channel, cb) {
     var pin = getPin(channel);
     _write(PATH + '/export', pin, function(err) {
-        if (err) logError(err);
-        exportedPins.push(pin);
-        if (cb) cb();
+        if (!err) {
+            exportedPins.push(pin);
+        }
+        if (cb) return cb(err);
     });
 }
 
-// Expose this until the destructor works reliably
-Gpio.prototype.unexportChannel = function(channel, cb) {
+function unexportChannel(channel, cb) {
     var pin = getPin(channel);
     unexportPin(pin, cb);
     fs.unwatchFile(PATH + '/gpio' + pin + '/value');
@@ -174,8 +168,7 @@ Gpio.prototype.unexportChannel = function(channel, cb) {
 
 function unexportPin(pin, cb) {
     _write(PATH + '/unexport', pin, function(err) {
-        if (err) logError(err);
-        if (cb) cb();
+        if (cb) return cb(err);
     });
 }
 
@@ -199,12 +192,6 @@ function getPin(channel) {
 function setListener(channel, cb) {
     var pin = getPin(channel);
     fs.watchFile(PATH + '/gpio' + pin + '/value', cb);
-}
-
-function destroy() {
-    exportedPins.forEach(function(pin) {
-        unexportPin(pin);
-    });
 }
 
 module.exports = new Gpio;
