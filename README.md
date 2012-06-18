@@ -1,4 +1,4 @@
-rp-gpio.js
+rpi-gpio.js
 ==========
 
 
@@ -14,7 +14,7 @@ All functions within this module are asynchronous, so where necessary - for exam
 
 ### Query the value of a pin
 ```js
-var gpio = require('./rp-gpio');
+var gpio = require('./rpi-gpio');
 
 gpio.setup(7, gpio.DIR_IN);
 gpio.read(7, function(value) {
@@ -25,7 +25,7 @@ gpio.read(7, function(value) {
 ### Listen for changes on a pin
 The GPIO module inherits from `EventEmitter` so any of the [EventEmitter functions](http://nodejs.org/api/events.html) can be used. The example below shows how to listen for a change in value to a channel.
 ```js
-var gpio = require('./rp-gpio');
+var gpio = require('./rpi-gpio');
 
 gpio.setup(7, gpio.DIR_IN);
 gpio.on('change', function(channel, value) {
@@ -36,7 +36,7 @@ gpio.on('change', function(channel, value) {
 ### Voltage cycling a pin
 This example shows how to set up a channel for output mode. After it is set up, it executes a callback which in turn calls another, causing the voltage to alternate up and down three times.
 ```js
-var gpio = require('./rp-gpio');
+var gpio = require('./rpi-gpio');
 
 var pin   = 7,
     delay = 2000,
@@ -67,7 +67,7 @@ function off() {
 ### Querying a pin in BCM mode
 This queries the same physical pin as in the previous examples.
 ```js
-var gpio = require('./rp-gpio');
+var gpio = require('./rpi-gpio');
 
 gpio.setMode(gpio.MODE_BCM);
 gpio.setup(4, gpio.DIR_IN);

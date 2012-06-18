@@ -1,8 +1,8 @@
 {
-    "name": "rp-gpio.js",
+    "name": "rpi-gpio.js",
     "author": "James Barwell <jb@jamesbarwell.co.uk>",
     "description": "Control Raspberry Pi GPIO pins with node.js",
     "version": "0.0.1",
-    "main": "rp-gpio.js"
+    "main": "rpi-gpio.js"
 }
 
