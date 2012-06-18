@@ -63,6 +63,7 @@ Gpio.prototype.setMode = function(mode) {
         throw new Error('Cannot set invalid mode [' + mode + ']');
     }
     activeMode = mode;
+    this.emit('modeChange', mode);
 }
 
 /**
@@ -81,8 +82,10 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     var self = this;
     function doExport() {
         exportChannel(channel, function() {
+            self.emit('export', channel);
             setListener(channel, function() {
-                self.read(channel, function(value) {
+                self.read(channel, function(err, value) {
+                    if (err) return cb(err);
                     self.emit('change', channel, value);
                 });
             });
@@ -133,10 +136,11 @@ Gpio.prototype.input = Gpio.prototype.read;
 /**
  * Unexport any open pins
  */
-Gpio.prototype.destroy = function() {
+Gpio.prototype.destroy = function(cb) {
     exportedPins.forEach(function(pin) {
         unexportPin(pin);
     });
+    cb();
 }
 
 function setDirection(channel, direction, cb) {
