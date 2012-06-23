@@ -1,0 +1,273 @@
+describe('rpi-gpio', function() {
+
+    var fs   = require('fs'),
+        path = require('path'),
+        gpio = require('../rpi-gpio.js');
+
+    beforeEach(function() {
+        // Use BCM by default to avoid dealing with pin mapping
+        gpio.reset();
+        gpio.setMode(gpio.MODE_BCM);
+    });
+
+    describe('setMode', function() {
+        it('should throw an error if the mode is invalid', function() {
+            expect(function() {
+                gpio.setMode('invalid');
+            }).toThrow(new Error('Cannot set invalid mode'));
+        });
+        it('should emit a modeChange event', function() {
+            spyOn(gpio, 'emit');
+            gpio.setMode(gpio.MODE_RPI);
+            expect(gpio.emit).toHaveBeenCalledWith('modeChange', 'rpi');
+
+            gpio.setMode(gpio.MODE_BCM);
+            expect(gpio.emit).toHaveBeenCalledWith('modeChange', 'bcm');
+        });
+    });
+
+    describe('setup', function() {
+        beforeEach(function() {
+            spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
+        });
+
+        it('should throw an error if the channel if invalid', function() {
+            var callback = jasmine.createSpy();
+            gpio.setup(null, null, callback);
+            expect(callback).toHaveBeenCalledWith(new Error('Channel not specified'));
+        });
+
+        describe('when the channel is already exported', function() {
+            beforeEach(function() {
+                spyOn(path, 'exists').andCallFake(function(path, cb) {
+                    cb(true);
+                });
+                var callback = jasmine.createSpy();
+                gpio.setup(1, null, callback);
+            });
+            it('should unexport and export the channel', function() {
+                expect(fs.writeFile).toHaveBeenCalled();
+                var args = fs.writeFile.calls[0].args;
+                expect(args[0]).toEqual('/sys/class/gpio/unexport');
+                expect(args[1]).toEqual('1');
+
+                args = fs.writeFile.calls[1].args;
+                expect(args[0]).toEqual('/sys/class/gpio/export');
+                expect(args[1]).toEqual('1');
+            });
+        });
+
+        describe('when the channel is not already exported', function() {
+            describe('and minimum arguments are specified', function() {
+                beforeEach(function() {
+                    spyOn(path, 'exists').andCallFake(function(path, cb) {
+                        cb(false);
+                    });
+                    spyOn(fs, 'watchFile').andCallFake(function(path, cb) {});
+                    spyOn(gpio, 'emit');
+                    var callback = jasmine.createSpy();
+                    gpio.setup(1, null, callback);
+                });
+                it('should export the channel', function() {
+                    expect(fs.writeFile).toHaveBeenCalled();
+                    var args = fs.writeFile.calls[0].args;
+                    expect(args[0]).toEqual('/sys/class/gpio/export');
+                    expect(args[1]).toEqual('1');
+                });
+                it('should emit an export event', function() {
+                    // The emitted channel is the same format as given
+                    expect(gpio.emit).toHaveBeenCalledWith('export', 1);
+                });
+                it('should set the channel direction to out by default', function() {
+                    var args = fs.writeFile.calls[1].args;
+                    expect(args[0]).toEqual('/sys/class/gpio/gpio1/direction');
+                    expect(args[1]).toEqual('out');
+                });
+                it('should set up a file watcher for the value', function() {
+                    var args = fs.watchFile.mostRecentCall.args;
+                    expect(args[0]).toEqual('/sys/class/gpio/gpio1/value');
+                });
+            });
+            describe('and direction is specified', function() {
+                beforeEach(function() {
+                    spyOn(path, 'exists').andCallFake(function(path, cb) {
+                        cb(false);
+                    });
+                    spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
+                });
+                it('should set the channel direction', function() {
+                    var callback = jasmine.createSpy();
+                    // Input
+                    gpio.setup(1, gpio.DIR_IN, callback);
+                    var args = fs.writeFile.calls[1].args;
+                    expect(args[0]).toEqual('/sys/class/gpio/gpio1/direction');
+                    expect(args[1]).toEqual('in');
+
+                    // Output
+                    fs.writeFile.reset();
+                    gpio.setup(1, gpio.DIR_OUT, callback);
+                    var args = fs.writeFile.calls[1].args;
+                    expect(args[0]).toEqual('/sys/class/gpio/gpio1/direction');
+                    expect(args[1]).toEqual('out');
+                });
+            });
+        });
+    });
+
+    describe('write', function() {
+        beforeEach(function() {
+            spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
+            spyOn(path, 'exists').andCallFake(function(path, cb) {
+                cb(false);
+            });
+            spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
+            var callback = jasmine.createSpy();
+            gpio.setup(1, gpio.DIR_OUT, callback);
+        });
+
+        it('should write the value to the file system', function() {
+            var callback = jasmine.createSpy();
+            gpio.write(1, true, callback);
+            var args = fs.writeFile.mostRecentCall.args;
+            expect(args[0]).toEqual('/sys/class/gpio/gpio1/value');
+            expect(args[1]).toEqual('1');
+            expect(callback).toHaveBeenCalled();
+
+            gpio.write(1, false, callback);
+            expect(fs.writeFile.mostRecentCall.args[1]).toEqual('0');
+        });
+    });
+
+    describe('read', function() {
+        beforeEach(function() {
+            spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
+            spyOn(path, 'exists').andCallFake(function(path, cb) {
+                cb(false);
+            });
+            spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
+            spyOn(fs, 'readFile').andCallFake(function(path, encoding, cb) { cb(); });
+            var callback = jasmine.createSpy();
+            gpio.setup(1, gpio.DIR_IN, callback);
+        });
+        it('should read the value from the file system', function() {
+            var callback = jasmine.createSpy();
+            gpio.read(1, callback);
+            var args = fs.readFile.mostRecentCall.args;
+            expect(args[0]).toEqual('/sys/class/gpio/gpio1/value');
+            expect(callback).toHaveBeenCalled();
+        });
+    });
+
+    describe('destroy', function() {
+        beforeEach(function() {
+            spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
+            spyOn(path, 'exists').andCallFake(function(path, cb) {
+                cb(false);
+            });
+            spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
+            var callback = jasmine.createSpy();
+            [1, 2, 3].forEach(function(pin) {
+                gpio.setup(pin, gpio.DIR_IN, callback);
+            });
+        });
+        it('should unexport any exported pins', function() {
+            var callback = jasmine.createSpy();
+            fs.writeFile.reset();
+            gpio.destroy(callback);
+
+            var exportPath = '/sys/class/gpio/unexport';
+            expect(fs.writeFile.calls[0].args[0]).toEqual(exportPath);
+            expect(fs.writeFile.calls[1].args[0]).toEqual(exportPath);
+            expect(fs.writeFile.calls[2].args[0]).toEqual(exportPath);
+
+            expect(fs.writeFile.calls[0].args[1]).toEqual('1');
+            expect(fs.writeFile.calls[1].args[1]).toEqual('2');
+            expect(fs.writeFile.calls[2].args[1]).toEqual('3');
+            expect(callback).toHaveBeenCalled();
+        });
+    });
+
+    describe('pin value change', function() {
+        var fileChangeCallback;
+        beforeEach(function() {
+            spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
+            spyOn(path, 'exists').andCallFake(function(path, cb) {
+                cb(false);
+            });
+            spyOn(fs, 'watchFile').andCallFake(function(path, cb) {
+                fileChangeCallback = cb;
+            });
+            spyOn(fs, 'readFile').andCallFake(function(path, encoding, cb) {
+                cb(null, true);
+            });
+            spyOn(gpio, 'emit');
+            var callback = jasmine.createSpy();
+            gpio.setup(1, gpio.DIR_IN, callback);
+        });
+        it('should emit a change event', function() {
+            // Manually trigger the event as if the pin value had changed
+            fileChangeCallback();
+            expect(gpio.emit).toHaveBeenCalledWith('change', 1, true);
+        });
+    });
+
+    describe('pin translation', function() {
+        beforeEach(function() {
+            spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
+            spyOn(path, 'exists').andCallFake(function(path, cb) {
+                cb(false);
+            });
+            spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
+        });
+        describe('when in RPI mode', function() {
+            beforeEach(function() {
+                gpio.setMode(gpio.MODE_RPI);
+            });
+            it('should map the RPI pin to the BCM pin', function() {
+                var map = {
+                    // RPI to BCM
+                    '3':  '0',
+                    '5':  '1',
+                    '7':  '4',
+                    '8':  '14',
+                    '10': '15',
+                    '11': '17',
+                    '12': '18',
+                    '13': '21',
+                    '15': '22',
+                    '16': '23',
+                    '18': '24',
+                    '19': '10',
+                    '21': '9',
+                    '22': '25',
+                    '23': '11',
+                    '24': '8',
+                    '26': '7'
+                }
+
+                for (var rpiPin in map) {
+                    var bcmPin = map[rpiPin];
+                    var callback = jasmine.createSpy();
+                    fs.writeFile.reset();
+                    gpio.setup(rpiPin, gpio.DIR_IN, callback);
+                    expect(fs.writeFile.calls[0].args[1]).toEqual(bcmPin);
+                }
+            });
+        });
+        describe('when in BCM mode', function() {
+            beforeEach(function() {
+                gpio.setMode(gpio.MODE_BCM);
+            });
+            it('should return the untranslated BCM pin', function() {
+                [1,2,3,4,5,6,7,8,9,10].forEach(function(bcmPin) {
+                    bcmPin = bcmPin + '';
+                    var callback = jasmine.createSpy();
+                    fs.writeFile.reset();
+                    gpio.setup(bcmPin, gpio.DIR_IN, callback);
+                    expect(fs.writeFile.calls[0].args[1]).toEqual(bcmPin);
+                });
+            });
+        });
+    });
+
+});

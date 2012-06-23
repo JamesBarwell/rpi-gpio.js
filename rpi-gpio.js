@@ -41,7 +41,7 @@ var PATH     = '/sys/class/gpio',
 
 // Keep track of mode and exported pins
 var activeMode = MODE_RPI;
-var exportedPins = [];
+var exportedPins = {};
 
 // Constructor
 function Gpio() { EventEmitter.call(this); }
@@ -60,7 +60,7 @@ Gpio.prototype.DIR_OUT  = DIR_OUT;
  */
 Gpio.prototype.setMode = function(mode) {
     if (mode !== MODE_RPI && mode !== MODE_BCM) {
-        throw new Error('Cannot set invalid mode [' + mode + ']');
+        throw new Error('Cannot set invalid mode');
     }
     activeMode = mode;
     this.emit('modeChange', mode);
@@ -77,7 +77,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     if (!channel) {
         return cb(new Error('Channel not specified'));
     }
-    direction = direction || this.DIRECTION.out;
+    direction = direction || this.DIR_OUT;
 
     var self = this;
     function doExport() {
@@ -137,10 +137,18 @@ Gpio.prototype.input = Gpio.prototype.read;
  * Unexport any open pins
  */
 Gpio.prototype.destroy = function(cb) {
-    exportedPins.forEach(function(pin) {
+    for (var pin in exportedPins) {
         unexportPin(pin);
-    });
+    };
     cb();
+}
+
+/**
+ * Reset the state of the module
+ */
+Gpio.prototype.reset = function() {
+    activeMode = MODE_RPI;
+    exportedPins = {};
 }
 
 function setDirection(channel, direction, cb) {
@@ -157,7 +165,7 @@ function exportChannel(channel, cb) {
     var pin = getPin(channel);
     fs.writeFile(PATH + '/export', pin, function(err) {
         if (!err) {
-            exportedPins.push(pin);
+            exportedPins[pin] = true;
         }
         if (cb) return cb(err);
     });
@@ -189,7 +197,7 @@ function getPin(channel) {
     }
     //@todo validate this properly
 
-    return pin;
+    return pin + '';
 }
 
 function setListener(channel, cb) {

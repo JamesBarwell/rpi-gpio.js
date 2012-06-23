@@ -1,8 +1,16 @@
 {
-    "name": "rpi-gpio.js",
+    "name": "rpi-gpio",
     "author": "James Barwell <jb@jamesbarwell.co.uk>",
     "description": "Control Raspberry Pi GPIO pins with node.js",
     "version": "0.0.1",
-    "main": "rpi-gpio.js"
+    "main": "rpi-gpio.js",
+    "keywords:": ["raspberry", "pi", "gpio"],
+    "repository": {
+        "type" : "git",
+        "url" : "https://github.com/JamesBarwell/rpi-gpio.js.git"
+    },
+    "devDependencies": {
+        "jasmine-node": "1.0.26"
+    }
 }
 
