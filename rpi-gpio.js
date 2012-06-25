@@ -146,10 +146,16 @@ Gpio.prototype.input = Gpio.prototype.read;
  * @param {function} cb Optional callback
  */
 Gpio.prototype.destroy = function(cb) {
-    for (var pin in exportedPins) {
-        unexportPin(pin);
-    };
-    if (cb) cb();
+    var pins = Object.keys(exportedPins);
+    var pinCount = pins.length;
+    while (pinCount--) {
+        var pin = pins[pinCount];
+        if (pinCount === 0 && cb) {
+            unexportPin(pin, cb);
+        } else {
+            unexportPin(pin);
+        }
+    }
 }
 
 /**
