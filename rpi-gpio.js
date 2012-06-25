@@ -5,20 +5,19 @@ var fs     = require('fs'),
     path = require('path');
 
 // Constants
-var PATH     = '/sys/class/gpio',
-    DIR_IN   = 'in',
-    DIR_OUT  = 'out';
+var PATH = '/sys/class/gpio';
 
 // Constructor
 function Gpio() {
     EventEmitter.call(this);
     this.getPin = this.MODE_RPI;
+    this.exportedPins = {};
 }
 util.inherits(Gpio, EventEmitter);
 
 // Expose these constants
-Gpio.prototype.DIR_IN   = DIR_IN;
-Gpio.prototype.DIR_OUT  = DIR_OUT;
+Gpio.prototype.DIR_IN  = 'in';
+Gpio.prototype.DIR_OUT = 'out';
 Gpio.prototype.MODE_RPI = function(channel) {
     return {
         // RPi to BCM
@@ -54,9 +53,6 @@ Gpio.prototype.MODE_BCM = function(channel) {
     return channel + '';
 };
 
-// Keep track of mode and exported pins
-var exportedPins = {};
-
 /**
  * Set pin reference mode. Defaults to 'rpi'.
  *
@@ -89,11 +85,16 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
         direction = this.DIR_OUT;
     }
 
+    if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
+        return cb(new Error('Cannot set invalid direction [' + direction + ']'));
+    }
+
     var pin = this.getPin(channel);
 
     var self = this;
     function doExport() {
         exportPin(pin, function() {
+            self.exportedPins[pin] = true;
             self.emit('export', channel);
             setListener(pin, function() {
                 self.read(channel, function(err, value) {
@@ -151,7 +152,7 @@ Gpio.prototype.input = Gpio.prototype.read;
  * @param {function} cb Optional callback
  */
 Gpio.prototype.destroy = function(cb) {
-    var pins = Object.keys(exportedPins);
+    var pins = Object.keys(this.exportedPins);
     var pinCount = pins.length;
     while (pinCount--) {
         var pin = pins[pinCount];
@@ -168,13 +169,10 @@ Gpio.prototype.destroy = function(cb) {
  */
 Gpio.prototype.reset = function() {
     this.getPin = this.MODE_RPI;
-    exportedPins = {};
+    this.exportedPins = {};
 }
 
 function setDirection(pin, direction, cb) {
-    if (direction !== DIR_IN && direction !== DIR_OUT) {
-        return cb(new Error('Cannot set invalid direction [' + direction + ']'));
-    }
     fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
         if (cb) return cb(err);
     });
@@ -182,9 +180,6 @@ function setDirection(pin, direction, cb) {
 
 function exportPin(pin, cb) {
     fs.writeFile(PATH + '/export', pin, function(err) {
-        if (!err) {
-            exportedPins[pin] = true;
-        }
         if (cb) return cb(err);
     });
 }
