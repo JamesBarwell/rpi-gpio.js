@@ -65,8 +65,7 @@ describe('rpi-gpio', function() {
                     });
                     spyOn(fs, 'watchFile').andCallFake(function(path, cb) {});
                     spyOn(gpio, 'emit');
-                    var callback = jasmine.createSpy();
-                    gpio.setup(1, null, callback);
+                    gpio.setup(1);
                 });
                 it('should export the channel', function() {
                     expect(fs.writeFile).toHaveBeenCalled();
@@ -109,6 +108,19 @@ describe('rpi-gpio', function() {
                     var args = fs.writeFile.calls[1].args;
                     expect(args[0]).toEqual('/sys/class/gpio/gpio1/direction');
                     expect(args[1]).toEqual('out');
+                });
+            });
+            describe('and callback is specified', function() {
+                beforeEach(function() {
+                    spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
+                        cb(false);
+                    });
+                    spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
+                });
+                it('should execute the callback when direction is missing', function() {
+                    var callback = jasmine.createSpy();
+                    gpio.setup(1, callback);
+                    expect(callback).toHaveBeenCalled();
                 });
             });
         });

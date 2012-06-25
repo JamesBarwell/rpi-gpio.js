@@ -78,7 +78,13 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     if (!channel) {
         return cb(new Error('Channel not specified'));
     }
+
     direction = direction || this.DIR_OUT;
+
+    if (typeof direction === 'function') {
+        cb = direction;
+        direction = this.DIR_OUT;
+    }
 
     var self = this;
     function doExport() {
