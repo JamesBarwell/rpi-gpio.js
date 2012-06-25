@@ -142,12 +142,14 @@ Gpio.prototype.input = Gpio.prototype.read;
 
 /**
  * Unexport any open pins
+ *
+ * @param {function} cb Optional callback
  */
 Gpio.prototype.destroy = function(cb) {
     for (var pin in exportedPins) {
         unexportPin(pin);
     };
-    cb();
+    if (cb) cb();
 }
 
 /**
