@@ -7,7 +7,14 @@ Control Raspberry Pi GPIO pins with node.js
 ## Setup
 See this guide on how to get [node.js running on Raspberry Pi](http://elsmorian.com/post/23474168753/node-js-on-raspberry-pi).
 
+This module can be installed with npm:
+```js
+npm install rpi-gpio
+```
+
 ## Usage
+First, make sure you are running as root, else the Raspberry Pi will not let you output to the GPIO.
+
 After loading the module, initialise a pin by calling `setup`. Each GPIO pin can be set as either an input or output, which lets you read and write to it respectively. The 'channel' must be specified, to indicate which pin to use. There are two different ways to reference a channel; either using the Raspberry Pi or the BCM naming schema (sadly, neither of which match the physical pins!). This module supports both schemas, with Raspberry Pi being the default. Please see [this page](http://elinux.org/RPi_Low-level_peripherals) for more details.
 
 All functions within this module are asynchronous, so where necessary - for example in reading the value of a pin - a callback must be provided.
