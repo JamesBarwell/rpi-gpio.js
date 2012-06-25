@@ -187,14 +187,22 @@ describe('rpi-gpio', function() {
             fs.writeFile.reset();
             gpio.destroy(callback);
 
-            var exportPath = '/sys/class/gpio/unexport';
-            expect(fs.writeFile.calls[0].args[0]).toEqual(exportPath);
-            expect(fs.writeFile.calls[1].args[0]).toEqual(exportPath);
-            expect(fs.writeFile.calls[2].args[0]).toEqual(exportPath);
+            var unexportPath = '/sys/class/gpio/unexport';
+            var pathsExported = [];
+            expect(fs.writeFile.calls[0].args[0]).toEqual(unexportPath);
+            expect(fs.writeFile.calls[1].args[0]).toEqual(unexportPath);
+            expect(fs.writeFile.calls[2].args[0]).toEqual(unexportPath);
 
-            expect(fs.writeFile.calls[0].args[1]).toEqual('1');
-            expect(fs.writeFile.calls[1].args[1]).toEqual('2');
-            expect(fs.writeFile.calls[2].args[1]).toEqual('3');
+            // Paths are unexported in reverse order, so just get them
+            // into an array and sort before asserting
+            [0,1,2].forEach(function(callNumber) {
+                pathsExported.push(fs.writeFile.calls[callNumber].args[1]);
+            });
+            pathsExported.sort();
+
+            expect(pathsExported[0]).toEqual('1');
+            expect(pathsExported[1]).toEqual('2');
+            expect(pathsExported[2]).toEqual('3');
             expect(callback).toHaveBeenCalled();
         });
     });
