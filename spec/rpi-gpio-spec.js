@@ -19,10 +19,10 @@ describe('rpi-gpio', function() {
         it('should emit a modeChange event', function() {
             spyOn(gpio, 'emit');
             gpio.setMode(gpio.MODE_RPI);
-            expect(gpio.emit).toHaveBeenCalledWith('modeChange', 'rpi');
+            expect(gpio.emit).toHaveBeenCalledWith('modeChange', gpio.MODE_RPI);
 
             gpio.setMode(gpio.MODE_BCM);
-            expect(gpio.emit).toHaveBeenCalledWith('modeChange', 'bcm');
+            expect(gpio.emit).toHaveBeenCalledWith('modeChange', gpio.MODE_BCM);
         });
     });
 
@@ -39,9 +39,10 @@ describe('rpi-gpio', function() {
 
         describe('when the channel is already exported', function() {
             beforeEach(function() {
-                spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
+                spyOn(path, 'exists').andCallFake(function(path, cb) {
                     cb(true);
                 });
+                spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
                 var callback = jasmine.createSpy();
                 gpio.setup(1, null, callback);
             });
