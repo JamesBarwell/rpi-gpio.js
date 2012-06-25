@@ -1,7 +1,8 @@
 var fs     = require('fs'),
-    path   = require('path'),
     util   = require('util'),
-    EventEmitter = require('events').EventEmitter;
+    EventEmitter = require('events').EventEmitter,
+    // path.exists for 0.6.x support
+    path = require('path');
 
 // Constants
 var PATH     = '/sys/class/gpio',
@@ -185,7 +186,8 @@ function unexportPin(pin, cb) {
 
 function isExported(channel, cb) {
     var pin = getPin(channel);
-    path.exists(PATH + '/gpio' + pin, function(exists) {
+    // path.exists deprecated in 0.8.0
+    (fs.exists || path.exists)(PATH + '/gpio' + pin, function(exists) {
         if (cb) return cb(exists);
     });
 }
@@ -195,7 +197,6 @@ function getPin(channel) {
     if (activeMode === MODE_RPI) {
         pin = PIN_MAP[channel];
     }
-    //@todo validate this properly
 
     return pin + '';
 }

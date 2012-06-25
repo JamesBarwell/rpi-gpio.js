@@ -39,7 +39,7 @@ describe('rpi-gpio', function() {
 
         describe('when the channel is already exported', function() {
             beforeEach(function() {
-                spyOn(path, 'exists').andCallFake(function(path, cb) {
+                spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                     cb(true);
                 });
                 var callback = jasmine.createSpy();
@@ -60,7 +60,7 @@ describe('rpi-gpio', function() {
         describe('when the channel is not already exported', function() {
             describe('and minimum arguments are specified', function() {
                 beforeEach(function() {
-                    spyOn(path, 'exists').andCallFake(function(path, cb) {
+                    spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                         cb(false);
                     });
                     spyOn(fs, 'watchFile').andCallFake(function(path, cb) {});
@@ -90,7 +90,7 @@ describe('rpi-gpio', function() {
             });
             describe('and direction is specified', function() {
                 beforeEach(function() {
-                    spyOn(path, 'exists').andCallFake(function(path, cb) {
+                    spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                         cb(false);
                     });
                     spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
@@ -117,7 +117,7 @@ describe('rpi-gpio', function() {
     describe('write', function() {
         beforeEach(function() {
             spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
-            spyOn(path, 'exists').andCallFake(function(path, cb) {
+            spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                 cb(false);
             });
             spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
@@ -141,7 +141,7 @@ describe('rpi-gpio', function() {
     describe('read', function() {
         beforeEach(function() {
             spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
-            spyOn(path, 'exists').andCallFake(function(path, cb) {
+            spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                 cb(false);
             });
             spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
@@ -161,7 +161,7 @@ describe('rpi-gpio', function() {
     describe('destroy', function() {
         beforeEach(function() {
             spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
-            spyOn(path, 'exists').andCallFake(function(path, cb) {
+            spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                 cb(false);
             });
             spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
@@ -191,7 +191,7 @@ describe('rpi-gpio', function() {
         var fileChangeCallback;
         beforeEach(function() {
             spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
-            spyOn(path, 'exists').andCallFake(function(path, cb) {
+            spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                 cb(false);
             });
             spyOn(fs, 'watchFile').andCallFake(function(path, cb) {
@@ -214,7 +214,7 @@ describe('rpi-gpio', function() {
     describe('pin translation', function() {
         beforeEach(function() {
             spyOn(fs, 'writeFile').andCallFake(function(path, value, cb) { cb(); });
-            spyOn(path, 'exists').andCallFake(function(path, cb) {
+            spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                 cb(false);
             });
             spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
