@@ -10,12 +10,11 @@ var PATH = '/sys/class/gpio';
 // Constructor
 function Gpio() {
     EventEmitter.call(this);
-    this.getPin = this.MODE_RPI;
-    this.exportedPins = {};
+    this.reset();
 }
 util.inherits(Gpio, EventEmitter);
 
-// Expose these constants
+// Class constants
 Gpio.prototype.DIR_IN  = 'in';
 Gpio.prototype.DIR_OUT = 'out';
 Gpio.prototype.MODE_RPI = function(channel) {
@@ -86,7 +85,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     }
 
     if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
-        return cb(new Error('Cannot set invalid direction [' + direction + ']'));
+        return cb(new Error('Cannot set invalid direction'));
     }
 
     var pin = this.getPin(channel);
@@ -136,12 +135,13 @@ Gpio.prototype.output = Gpio.prototype.write;
  * Read a value from a channel
  *
  * @param {number}   channel The channel to read from
- * @param {function} cb      Callback which receives the channel's value
+ * @param {function} cb      Callback which receives the channel's boolean value
  */
 Gpio.prototype.read = function(channel, cb /*err,value*/) {
     var pin = this.getPin(channel);
     fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
-        return cb(err, data);
+        data = (data + '').trim() || '0';
+        return cb(err, (data === '1' ? true : false));
     });
 }
 Gpio.prototype.input = Gpio.prototype.read;

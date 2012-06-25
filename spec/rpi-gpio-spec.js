@@ -158,7 +158,7 @@ describe('rpi-gpio', function() {
                 cb(false);
             });
             spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
-            spyOn(fs, 'readFile').andCallFake(function(path, encoding, cb) { cb(); });
+            spyOn(fs, 'readFile').andCallFake(function(path, encoding, cb) { cb(null, '1'); });
             var callback = jasmine.createSpy();
             gpio.setup(1, gpio.DIR_IN, callback);
         });
@@ -167,7 +167,7 @@ describe('rpi-gpio', function() {
             gpio.read(1, callback);
             var args = fs.readFile.mostRecentCall.args;
             expect(args[0]).toEqual('/sys/class/gpio/gpio1/value');
-            expect(callback).toHaveBeenCalled();
+            expect(callback).toHaveBeenCalledWith(null, true);
         });
     });
 
@@ -219,7 +219,7 @@ describe('rpi-gpio', function() {
                 fileChangeCallback = cb;
             });
             spyOn(fs, 'readFile').andCallFake(function(path, encoding, cb) {
-                cb(null, true);
+                cb(null, '1');
             });
             spyOn(gpio, 'emit');
             var callback = jasmine.createSpy();
