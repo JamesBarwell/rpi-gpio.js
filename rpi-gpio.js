@@ -124,7 +124,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
  */
 Gpio.prototype.write = function(channel, value, cb /*err*/ ) {
     var pin = this.getPin(channel);
-    value = (!!value) ? '1' : '0';
+    value = (!!value && value !== '0') ? '1' : '0';
     fs.writeFile(PATH + '/gpio' + pin + '/value', value, function(err) {
         if (cb) return cb(err);
     }.bind(this));

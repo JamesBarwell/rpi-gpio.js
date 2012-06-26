@@ -145,9 +145,20 @@ describe('rpi-gpio', function() {
             expect(args[0]).toEqual('/sys/class/gpio/gpio1/value');
             expect(args[1]).toEqual('1');
             expect(callback).toHaveBeenCalled();
-
-            gpio.write(1, false, callback);
-            expect(fs.writeFile.mostRecentCall.args[1]).toEqual('0');
+        });
+        it('should normalise truthy values when writing', function() {
+            [true, 1, '1'].forEach(function(truthyValue) {
+                fs.writeFile.reset();
+                gpio.write(1, truthyValue);
+                expect(fs.writeFile.mostRecentCall.args[1]).toEqual('1');
+            });
+        });
+        it('should normalise falsey values when writing', function() {
+            [false, 0, '0'].forEach(function(falseyValue) {
+                fs.writeFile.reset();
+                gpio.write(1, falseyValue);
+                expect(fs.writeFile.mostRecentCall.args[1]).toEqual('0');
+            });
         });
     });
 
