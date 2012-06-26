@@ -39,7 +39,7 @@ describe('rpi-gpio', function() {
 
         describe('when the channel is already exported', function() {
             beforeEach(function() {
-                spyOn(path, 'exists').andCallFake(function(path, cb) {
+                spyOn((fs.exists ? fs : path), 'exists').andCallFake(function(path, cb) {
                     cb(true);
                 });
                 spyOn(fs, 'watchFile').andCallFake(function(path, cb) { });
