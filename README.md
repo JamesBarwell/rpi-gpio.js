@@ -56,6 +56,32 @@ function write() {
 }
 ```
 
+### Unexport pins when finished
+This will close any pins that were opened by the module.
+```js
+var gpio = require('../rpi-gpio');
+
+gpio.on('export', function(channel) {
+    console.log('Channel set: ' + channel);
+});
+
+gpio.setup(7, gpio.DIR_OUT);
+gpio.setup(15, gpio.DIR_OUT);
+gpio.setup(16, gpio.DIR_OUT, pause);
+
+function pause() {
+    setTimeout(closePins, 2000);
+}
+
+function closePins() {
+    gpio.destroy(function() {
+        console.log('All pins unexported');
+        return process.exit(0);
+    });
+}
+```
+
+
 ### Voltage cycling a pin
 This example shows how to set up a channel for output mode. After it is set up, it executes a callback which in turn calls another, causing the voltage to alternate up and down three times.
 ```js
