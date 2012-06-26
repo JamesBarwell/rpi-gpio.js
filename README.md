@@ -20,7 +20,7 @@ Please note that there are two different ways to reference a channel; either usi
 
 ### Query the value of a pin
 ```js
-var gpio = require('../rpi-gpio');
+var gpio = require('rpi-gpio');
 
 gpio.setup(7, gpio.DIR_IN, readInput);
 
@@ -34,7 +34,7 @@ function readInput() {
 ### Listen for changes on a pin
 The GPIO module inherits from `EventEmitter` so any of the [EventEmitter functions](http://nodejs.org/api/events.html) can be used. The example below shows how to listen for a change in value to a channel.
 ```js
-var gpio = require('../rpi-gpio');
+var gpio = require('rpi-gpio');
 
 gpio.on('change', function(channel, value) {
 	console.log('Channel ' + channel + ' value is now ' + value);
@@ -44,7 +44,7 @@ gpio.setup(7, gpio.DIR_IN);
 
 ### Write to a pin
 ```js
-var gpio = require('../rpi-gpio');
+var gpio = require('rpi-gpio');
 
 gpio.setup(7, gpio.DIR_OUT, write);
 
@@ -59,7 +59,7 @@ function write() {
 ### Voltage cycling a pin
 This example shows how to set up a channel for output mode. After it is set up, it executes a callback which in turn calls another, causing the voltage to alternate up and down three times.
 ```js
-var gpio = require('../rpi-gpio');
+var gpio = require('rpi-gpio');
 
 var pin   = 7,
     delay = 2000,
@@ -94,9 +94,9 @@ function off() {
 ```
 
 ### Using flow control modules
-Due to the asynchronous nature of this module, using an asynchronous flow control module can help to simplify development. This example uses the async module to turn pins on and off in series.
+Due to the asynchronous nature of this module, using an asynchronous flow control module can help to simplify development. This example uses [async.js](https://github.com/caolan/async) to turn pins on and off in series.
 ```js
-var gpio = require('../rpi-gpio');
+var gpio = require('rpi-gpio');
 var async = require('async');
 
 gpio.on('change', function(channel, value) {
