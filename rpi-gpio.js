@@ -14,42 +14,89 @@ function Gpio() {
 }
 util.inherits(Gpio, EventEmitter);
 
-// Class constants
+
+var pins = {
+    '1':  null,
+    '2':  null,
+    '3':  0,
+    '4':  null,
+    '5':  1,
+    '6':  null,
+    '7':  4,
+    '8':  14,
+    '9':  null,
+    '10': 15,
+    '11': 17,
+    '12': 18,
+    '13': 21,
+    '14': null,
+    '15': 22,
+    '16': 23,
+    '17': null,
+    '18': 24,
+    '19': 10,
+    '20': null,
+    '21': 9,
+    '22': 25,
+    '23': 11,
+    '24': 8,
+    '25': null,
+    '26': 7
+};
+
+var changedPinsV2 = {
+    '3'  : 2,
+    '5'  : 3,
+    '13' : 27
+};
+
+// Constants
 Gpio.prototype.DIR_IN  = 'in';
 Gpio.prototype.DIR_OUT = 'out';
+
 Gpio.prototype.MODE_RPI = function(channel) {
-    return {
-        // RPi to BCM
-        '1':  null,
-        '2':  null,
-        '3':  0,
-        '4':  null,
-        '5':  1,
-        '6':  null,
-        '7':  4,
-        '8':  14,
-        '9':  null,
-        '10': 15,
-        '11': 17,
-        '12': 18,
-        '13': 21,
-        '14': null,
-        '15': 22,
-        '16': 23,
-        '17': null,
-        '18': 24,
-        '19': 10,
-        '20': null,
-        '21': 9,
-        '22': 25,
-        '23': 11,
-        '24': 8,
-        '25': null,
-        '26': 7
-    }[channel] + '';
+    // RPi to BCM
+    return pins[channel] + '';
 };
 Gpio.prototype.MODE_BCM = function(channel) {
     return channel + '';
+};
+
+/**
+ * Changes the necessary pins for the Raspberry V2
+ */
+Gpio.prototype.changePins = function(newScheme) {
+    Object.keys(newScheme).forEach(function(index) {
+        pins[index] = newScheme[index];
+    });
+};
+
+/**
+ * Sets the version of the model
+ */
+Gpio.prototype.setRaspberryVersion = function(cb) {
+    var self = this;
+    fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
+
+        data = self.parseCpuinfo(data);
+        data = data.trim().slice(-1);
+
+        if (data == '2' || data == '3') {
+            self.version = 1;
+        } else {
+            self.version = 2;
+        }
+        cb();
+    });
+};
+
+/**
+ * Detects if the Raspberry Pi is version 2
+ */
+Gpio.prototype.parseCpuinfo = function(data) {
+    var res = data.split('Revision')[1].trim();
+
+    return res[2] + res[3] + res[4] + res[5];
 };
 
 /**
@@ -63,7 +110,7 @@ Gpio.prototype.setMode = function(mode) {
     }
     this.getPin = mode;
     this.emit('modeChange', mode);
-}
+};
 
 /**
  * Setup a channel for use as an input or output
@@ -88,32 +135,38 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
         return cb(new Error('Cannot set invalid direction'));
     }
 
-    var pin = this.getPin(channel);
-
     var self = this;
-    function doExport() {
-        exportPin(pin, function() {
-            self.exportedPins[pin] = true;
-            self.emit('export', channel);
-            setListener(pin, function() {
-                self.read(channel, function(err, value) {
-                    if (err) return cb(err);
-                    self.emit('change', channel, value);
-                });
-            });
-            setDirection(pin, direction, cb);
-        });
-    }
-
-    // Unexport pin if already open
-    isExported(pin, function(isOpen) {
-        if (isOpen) {
-            unexportPin(pin, doExport);
-        } else {
-            doExport();
+    this.setRaspberryVersion(function() {
+        if (self.version === 2) {
+            self.changePins(changedPinsV2);
         }
-    }.bind(this));
-}
+
+        var pin = self.getPin(channel);
+
+        function doExport() {
+            exportPin(pin, function() {
+                self.exportedPins[pin] = true;
+                self.emit('export', channel);
+                setListener(pin, function() {
+                    self.read(channel, function(err, value) {
+                        if (err) return cb(err);
+                        self.emit('change', channel, value);
+                    });
+                });
+                setDirection(pin, direction, cb);
+            });
+        }
+
+        // Unexport pin if already open
+        isExported(pin, function(isOpen) {
+            if (isOpen) {
+                unexportPin(pin, doExport);
+            } else {
+                doExport();
+            }
+        }.bind(self));
+    });
+};
 
 /**
  * Write a value to a channel
@@ -143,7 +196,7 @@ Gpio.prototype.read = function(channel, cb /*err,value*/) {
         data = (data + '').trim() || '0';
         return cb(err, (data === '1' ? true : false));
     });
-}
+};
 Gpio.prototype.input = Gpio.prototype.read;
 
 /**
@@ -162,7 +215,7 @@ Gpio.prototype.destroy = function(cb) {
             unexportPin(pin);
         }
     }
-}
+};
 
 /**
  * Reset the state of the module
@@ -170,7 +223,7 @@ Gpio.prototype.destroy = function(cb) {
 Gpio.prototype.reset = function() {
     this.getPin = this.MODE_RPI;
     this.exportedPins = {};
-}
+};
 
 function setDirection(pin, direction, cb) {
     fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {

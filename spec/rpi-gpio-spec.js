@@ -8,6 +8,8 @@ describe('rpi-gpio', function() {
         // Use BCM by default to avoid dealing with pin mapping
         gpio.reset();
         gpio.setMode(gpio.MODE_BCM);
+        gpio.setRaspberryVersion = function(cb) { cb(); };
+        gpio.version = 1;
     });
 
     describe('setMode', function() {
@@ -23,6 +25,14 @@ describe('rpi-gpio', function() {
 
             gpio.setMode(gpio.MODE_BCM);
             expect(gpio.emit).toHaveBeenCalledWith('modeChange', gpio.MODE_BCM);
+        });
+    });
+
+    describe('cpuinfo parsing', function() {
+        var data = 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0002\nSerial   : 000000009a5d9c22';
+
+        it('should return the revision', function() {
+            expect(gpio.parseCpuinfo(data)).toEqual('0002');
         });
     });
 
@@ -255,35 +265,75 @@ describe('rpi-gpio', function() {
             beforeEach(function() {
                 gpio.setMode(gpio.MODE_RPI);
             });
-            it('should map the RPI pin to the BCM pin', function() {
-                var map = {
-                    // RPI to BCM
-                    '3':  '0',
-                    '5':  '1',
-                    '7':  '4',
-                    '8':  '14',
-                    '10': '15',
-                    '11': '17',
-                    '12': '18',
-                    '13': '21',
-                    '15': '22',
-                    '16': '23',
-                    '18': '24',
-                    '19': '10',
-                    '21': '9',
-                    '22': '25',
-                    '23': '11',
-                    '24': '8',
-                    '26': '7'
-                }
+            describe('when using the raspberry pi v1', function() {
+                beforeEach(function() {
+                    gpio.version = 1;
+                });
+                it('should map the RPI pin to the BCM pin', function() {
+                    var map = {
+                        // RPI to BCM
+                        '3':  '0',
+                        '5':  '1',
+                        '7':  '4',
+                        '8':  '14',
+                        '10': '15',
+                        '11': '17',
+                        '12': '18',
+                        '13': '21',
+                        '15': '22',
+                        '16': '23',
+                        '18': '24',
+                        '19': '10',
+                        '21': '9',
+                        '22': '25',
+                        '23': '11',
+                        '24': '8',
+                        '26': '7'
+                    }
 
-                for (var rpiPin in map) {
-                    var bcmPin = map[rpiPin];
-                    var callback = jasmine.createSpy();
-                    fs.writeFile.reset();
-                    gpio.setup(rpiPin, gpio.DIR_IN, callback);
-                    expect(fs.writeFile.calls[0].args[1]).toEqual(bcmPin);
-                }
+                    for (var rpiPin in map) {
+                        var bcmPin = map[rpiPin];
+                        var callback = jasmine.createSpy();
+                        fs.writeFile.reset();
+                        gpio.setup(rpiPin, gpio.DIR_IN, callback);
+                        expect(fs.writeFile.calls[0].args[1]).toEqual(bcmPin);
+                    }
+                });
+            });
+            describe('when using the raspberry pi v2', function() {
+                beforeEach(function() {
+                    gpio.version = 2;
+                });
+                it('should map the RPI pin to the BCM pin', function() {
+                    var map = {
+                        // RPI to BCM
+                        '3':  '2',
+                        '5':  '3',
+                        '7':  '4',
+                        '8':  '14',
+                        '10': '15',
+                        '11': '17',
+                        '12': '18',
+                        '13': '27',
+                        '15': '22',
+                        '16': '23',
+                        '18': '24',
+                        '19': '10',
+                        '21': '9',
+                        '22': '25',
+                        '23': '11',
+                        '24': '8',
+                        '26': '7'
+                    }
+
+                    for (var rpiPin in map) {
+                        var bcmPin = map[rpiPin];
+                        var callback = jasmine.createSpy();
+                        fs.writeFile.reset();
+                        gpio.setup(rpiPin, gpio.DIR_IN, callback);
+                        expect(fs.writeFile.calls[0].args[1]).toEqual(bcmPin);
+                    }
+                });
             });
         });
         describe('when in BCM mode', function() {
