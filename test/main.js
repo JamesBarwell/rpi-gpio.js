@@ -10,7 +10,7 @@ var _proc_cpuinfo = 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoM
 describe('rpi-gpio', function() {
 
     before(function() {
-        sinon.stub(fs, 'writeFile');
+        sinon.stub(fs, 'writeFile').yieldsAsync();
         sinon.stub(fs, 'exists');
         sinon.stub(fs, 'watchFile');
         sinon.stub(fs, 'readFile').withArgs('/proc/cpuinfo').yieldsAsync(null, _proc_cpuinfo);
@@ -75,13 +75,9 @@ describe('rpi-gpio', function() {
 
 
         context('when the channel is already exported', function() {
-            var callback;
-
             beforeEach(function(done) {
-                fs.writeFile.yields();
-                fs.exists.yields(true);
+                fs.exists.yieldsAsync(true);
 
-                callback = sinon.spy();
                 gpio.setup(1, null, function() {
                     done();
                 });
@@ -99,6 +95,50 @@ describe('rpi-gpio', function() {
                 assert.equal(args1[1], '1');
             });
         });
+
+        context('when the channel is not already exported', function() {
+            beforeEach(function() {
+                fs.exists.yieldsAsync(false);
+            });
+
+            context('and minimum arguments are specified', function() {
+                var listener;
+
+                beforeEach(function(done) {
+                    listener = sinon.spy();
+                    gpio.on('export', listener);
+
+                    gpio.setup(1, null, function() {
+                        done();
+                    });
+                });
+
+                it('should export the channel', function() {
+                    sinon.assert.called(fs.writeFile);
+
+                    var args0 = fs.writeFile.getCall(0).args;
+                    assert.equal(args0[0], '/sys/class/gpio/export');
+                    assert.equal(args0[1], '1');
+                });
+
+                it('should emit an export event', function() {
+                    // The emitted channel is the same format as given
+                    sinon.assert.calledWith(listener, 1);
+                });
+
+                it('should set the channel direction to out by default', function() {
+                    var args1 = fs.writeFile.getCall(1).args;
+                    assert.equal(args1[0], '/sys/class/gpio/gpio1/direction');
+                    assert.equal(args1[1], 'out');
+                });
+
+                it('should set up a file watcher for the value', function() {
+                    var args = fs.watchFile.lastCall.args;
+                    assert.equal(args[0], '/sys/class/gpio/gpio1/value');
+                });
+            });
+        });
+
     });
 
 });
