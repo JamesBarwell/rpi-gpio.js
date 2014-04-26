@@ -186,4 +186,73 @@ describe('rpi-gpio', function() {
 
     });
 
+    describe('write', function() {
+        var callback;
+
+        beforeEach(function(done) {
+            gpio.setup(1, gpio.DIR_OUT, onSetup);
+
+            callback = sinon.spy(onWrite);
+            function onWrite() {
+                done();
+            }
+
+            function onSetup() {
+                gpio.write(1, true, callback);
+            }
+        });
+
+        it('should write the value to the file system', function() {
+            var args = fs.writeFile.lastCall.args;
+            assert.equal(args[0], '/sys/class/gpio/gpio1/value');
+            assert.equal(args[1], '1');
+
+            sinon.assert.called(callback);
+        });
+
+        it('should normalise truthy values when writing', function() {
+            [true, 1, '1'].forEach(function(truthyValue) {
+                fs.writeFile.reset();
+                gpio.write(1, truthyValue);
+                var args = fs.writeFile.lastCall.args;
+                assert.equal(args[1], '1');
+            });
+        });
+
+        it('should normalise falsey values when writing', function() {
+            [false, 0, '0'].forEach(function(falseyValue) {
+                fs.writeFile.reset();
+                gpio.write(1, falseyValue);
+                var args = fs.writeFile.lastCall.args;
+                assert.equal(args[1], '0');
+            });
+        });
+    });
+
+    describe('read', function() {
+        var callback;
+
+        context('when the pin is on', function() {
+            beforeEach(function(done) {
+                fs.readFile.yieldsAsync(null, '1');
+                gpio.setup(1, gpio.DIR_IN, onSetup);
+
+                callback = sinon.spy(onRead);
+                function onRead() {
+                    done();
+                }
+
+                function onSetup() {
+                    gpio.read(1, callback);
+                }
+            });
+
+            it('should read the value from the file system', function() {
+                var args = fs.readFile.lastCall.args;
+                assert.equal(args[0], '/sys/class/gpio/gpio1/value');
+                sinon.assert.calledWith(callback, null, true);
+            });
+        });
+    });
+
 });
