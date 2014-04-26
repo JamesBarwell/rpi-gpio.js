@@ -11,8 +11,8 @@ describe('rpi-gpio', function() {
 
     before(function() {
         sinon.stub(fs, 'writeFile').yieldsAsync();
-        sinon.stub(fs, 'exists');
-        sinon.stub(fs, 'watchFile');
+        sinon.stub(fs, 'exists').yieldsAsync(false);
+        sinon.stub(fs, 'watchFile').yieldsAsync();
         sinon.stub(fs, 'readFile').withArgs('/proc/cpuinfo').yieldsAsync(null, _proc_cpuinfo);
     });
 
@@ -137,6 +137,51 @@ describe('rpi-gpio', function() {
                     assert.equal(args[0], '/sys/class/gpio/gpio1/value');
                 });
             });
+
+            context('and direction is specified inwards', function() {
+                beforeEach(function(done) {
+                    gpio.setup(1, gpio.DIR_IN, function() {
+                        done();
+                    });
+                });
+
+                it('should set the channel direction', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[0], '/sys/class/gpio/gpio1/direction');
+                    assert.equal(args[1], 'in');
+                });
+            });
+
+            context('and direction is specified outwards', function() {
+                beforeEach(function(done) {
+                    gpio.setup(1, gpio.DIR_OUT, function() {
+                        done();
+                    });
+                });
+
+                it('should set the channel direction', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[0], '/sys/class/gpio/gpio1/direction');
+                    assert.equal(args[1], 'out');
+                });
+            });
+
+            context('and callback is specified', function() {
+                var callback;
+
+                beforeEach(function(done) {
+                    function onSetupComplete () {
+                        done();
+                    }
+                    callback = sinon.spy(onSetupComplete);
+                    gpio.setup(1, callback);
+                });
+
+                it('should execute the callback when direction is missing', function() {
+                    sinon.assert.called(callback);
+                });
+            });
+
         });
 
     });
