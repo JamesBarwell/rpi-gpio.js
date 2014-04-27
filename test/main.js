@@ -255,4 +255,75 @@ describe('rpi-gpio', function() {
         });
     });
 
+    describe('destroy', function() {
+        var callback;
+
+        beforeEach(function(done) {
+            var i = 3;
+            [1, 2, 3].forEach(function(pin) {
+                gpio.setup(pin, gpio.DIR_IN, function() {
+                    if (--i === 0) {
+                        onSetupComplete();
+                    }
+                });
+            });
+
+            function onSetupComplete() {
+                fs.writeFile.reset();
+                gpio.destroy(callback);
+            }
+
+            callback = sinon.spy(onDestroy);
+            function onDestroy() {
+                done();
+            }
+        });
+
+        it('should unexport any exported pins', function() {
+            sinon.assert.called(callback);
+
+            var unexportPath = '/sys/class/gpio/unexport';
+            assert.equal(fs.writeFile.getCall(0).args[0], unexportPath);
+            assert.equal(fs.writeFile.getCall(1).args[0], unexportPath);
+            assert.equal(fs.writeFile.getCall(2).args[0], unexportPath);
+
+            // Paths are unexported in reverse order, so just get them
+            // into an array and sort before asserting
+            var pathsExported = [];
+            [0,1,2].forEach(function(callNumber) {
+                pathsExported.push(fs.writeFile.getCall(callNumber).args[1]);
+            });
+            pathsExported.sort();
+
+            assert.equal(pathsExported[0], '1');
+            assert.equal(pathsExported[1], '2');
+            assert.equal(pathsExported[2], '3');
+        });
+    });
+
+    describe('pin value change', function() {
+        var listener;
+
+        beforeEach(function(done) {
+            // @todo Must be sync yields, else the beforeEach completes
+            // before the read finishes. Make this neater.
+            fs.readFile.yields(null, '1');
+
+            listener = sinon.spy();
+            gpio.on('change', listener);
+
+            gpio.setup(1, gpio.DIR_IN, onSetupComplete);
+
+            function onSetupComplete() {
+                var cb = fs.watchFile.getCall(0).args[1];
+                cb();
+                done();
+            }
+        });
+
+        it('should emit a change event', function() {
+            sinon.assert.calledWith(listener, 1, true);
+        });
+    });
+
 });
