@@ -5,7 +5,9 @@ var fs     = require('fs');
 var path   = require('path');
 var gpio   = require('../rpi-gpio.js');
 
-var _proc_cpuinfo = 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0002\nSerial   : 000000009a5d9c22';
+var _proc_cpuinfo_v1 = 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0002\nSerial   : 000000009a5d9c22';
+
+var _proc_cpuinfo_v2 = 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0004\nSerial   : 000000009a5d9c22';
 
 describe('rpi-gpio', function() {
 
@@ -13,7 +15,7 @@ describe('rpi-gpio', function() {
         sinon.stub(fs, 'writeFile').yieldsAsync();
         sinon.stub(fs, 'exists').yieldsAsync(false);
         sinon.stub(fs, 'watchFile').yieldsAsync();
-        sinon.stub(fs, 'readFile').withArgs('/proc/cpuinfo').yieldsAsync(null, _proc_cpuinfo);
+        sinon.stub(fs, 'readFile').withArgs('/proc/cpuinfo').yieldsAsync(null, _proc_cpuinfo_v1);
     });
 
     beforeEach(function() {
@@ -51,7 +53,7 @@ describe('rpi-gpio', function() {
     describe('cpuinfo parsing', function() {
 
         it('should return the revision', function() {
-            var cpuInfo = gpio.parseCpuinfo(_proc_cpuinfo);
+            var cpuInfo = gpio.parseCpuinfo(_proc_cpuinfo_v1);
             assert.equal(cpuInfo, '0002');
         });
     });
@@ -323,6 +325,111 @@ describe('rpi-gpio', function() {
 
         it('should emit a change event', function() {
             sinon.assert.calledWith(listener, 1, true);
+        });
+    });
+
+    describe('pin translation', function() {
+
+        context('when in RPI mode', function() {
+            beforeEach(function() {
+                gpio.setMode(gpio.MODE_RPI);
+            });
+
+            context('when using the raspberry pi v1', function() {
+                var map = {
+                    // RPI to BCM
+                    '3':  '0',
+                    '5':  '1',
+                    '7':  '4',
+                    '8':  '14',
+                    '10': '15',
+                    '11': '17',
+                    '12': '18',
+                    '13': '21',
+                    '15': '22',
+                    '16': '23',
+                    '18': '24',
+                    '19': '10',
+                    '21': '9',
+                    '22': '25',
+                    '23': '11',
+                    '24': '8',
+                    '26': '7'
+                }
+
+                Object.keys(map).forEach(function(rpiPin) {
+                    var bcmPin = map[rpiPin];
+
+                    it('should map RPI pin ' + rpiPin + ' to BCM pin ' + bcmPin, function(done) {
+                        gpio.setup(rpiPin, gpio.DIR_IN, onSetupComplete);
+                        function onSetupComplete() {
+                            assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
+                            done();
+                        }
+                    });
+
+                });
+            });
+
+            context('when using the raspberry pi v2', function() {
+                beforeEach(function() {
+                    fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, _proc_cpuinfo_v2);
+                });
+
+                var map = {
+                    // RPI to BCM
+                    '3':  '2',
+                    '5':  '3',
+                    '7':  '4',
+                    '8':  '14',
+                    '10': '15',
+                    '11': '17',
+                    '12': '18',
+                    '13': '27',
+                    '15': '22',
+                    '16': '23',
+                    '18': '24',
+                    '19': '10',
+                    '21': '9',
+                    '22': '25',
+                    '23': '11',
+                    '24': '8',
+                    '26': '7'
+                }
+
+                Object.keys(map).forEach(function(rpiPin) {
+                    var bcmPin = map[rpiPin];
+
+                    it('should map RPI pin ' + rpiPin + ' to BCM pin ' + bcmPin, function(done) {
+                        gpio.setup(rpiPin, gpio.DIR_IN, onSetupComplete);
+                        function onSetupComplete() {
+                            assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
+                            done();
+                        }
+                    });
+
+                });
+            });
+
+        });
+
+        describe('when in BCM mode', function() {
+            beforeEach(function() {
+                gpio.setMode(gpio.MODE_BCM);
+            });
+
+            var bcmPins = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+            bcmPins.forEach(function(bcmPin) {
+                it('should return the untranslated BCM pin ' + bcmPin, function(done) {
+                    bcmPin = bcmPin + '';
+                    gpio.setup(bcmPin, gpio.DIR_IN, onSetupComplete);
+                    function onSetupComplete() {
+                        assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
+                        done();
+                    }
+                });
+            });
         });
     });
 
