@@ -237,43 +237,99 @@ describe('rpi-gpio', function() {
 
     });
 
-    describe('write', function() {
-        var callback;
+    describe('write()', function() {
+        context('when writing to a pin', function() {
+            var callback;
 
-        beforeEach(function(done) {
-            gpio.setup(1, gpio.DIR_OUT, onSetup);
+            beforeEach(function(done) {
+                gpio.setup(1, gpio.DIR_OUT, onSetup);
 
-            callback = sinon.spy(onWrite);
-            function onWrite() {
-                done();
-            }
+                callback = sinon.spy(onWrite);
+                function onWrite() {
+                    done();
+                }
 
-            function onSetup() {
-                gpio.write(1, true, callback);
-            }
+                function onSetup() {
+                    gpio.write(1, true, callback);
+                }
+            });
+
+            it('should write the value to the file system', function() {
+                var args = fs.writeFile.lastCall.args;
+                assert.equal(args[0], '/sys/class/gpio/gpio1/value');
+                assert.equal(args[1], '1');
+
+                sinon.assert.called(callback);
+            });
         });
 
-        it('should write the value to the file system', function() {
-            var args = fs.writeFile.lastCall.args;
-            assert.equal(args[0], '/sys/class/gpio/gpio1/value');
-            assert.equal(args[1], '1');
+        context('when given boolean true', function() {
+            beforeEach(function() {
+                gpio.write(1, true);
+            });
 
-            sinon.assert.called(callback);
-        });
-
-        it('should normalise truthy values when writing', function() {
-            [true, 1, '1'].forEach(function(truthyValue) {
-                fs.writeFile.reset();
-                gpio.write(1, truthyValue);
+            it('should normalise to string "1"', function() {
+                sinon.assert.calledOnce(fs.writeFile);
                 var args = fs.writeFile.lastCall.args;
                 assert.equal(args[1], '1');
             });
         });
 
-        it('should normalise falsey values when writing', function() {
-            [false, 0, '0'].forEach(function(falseyValue) {
-                fs.writeFile.reset();
-                gpio.write(1, falseyValue);
+        context('when given number 1', function() {
+            beforeEach(function() {
+                gpio.write(1, 1);
+            });
+
+            it('should normalise to string "1"', function() {
+                sinon.assert.calledOnce(fs.writeFile);
+                var args = fs.writeFile.lastCall.args;
+                assert.equal(args[1], '1');
+            });
+        });
+
+        context('when given string "1"', function() {
+            beforeEach(function() {
+                gpio.write(1, 1);
+            });
+
+            it('should normalise to string "1"', function() {
+                sinon.assert.calledOnce(fs.writeFile);
+                var args = fs.writeFile.lastCall.args;
+                assert.equal(args[1], '1');
+            });
+        });
+
+        context('when given boolean false', function() {
+            beforeEach(function() {
+                gpio.write(1, false);
+            });
+
+            it('should normalise to string "0"', function() {
+                sinon.assert.calledOnce(fs.writeFile);
+                var args = fs.writeFile.lastCall.args;
+                assert.equal(args[1], '0');
+            });
+        });
+
+        context('when given number 0', function() {
+            beforeEach(function() {
+                gpio.write(1, 0);
+            });
+
+            it('should normalise to string "0"', function() {
+                sinon.assert.calledOnce(fs.writeFile);
+                var args = fs.writeFile.lastCall.args;
+                assert.equal(args[1], '0');
+            });
+        });
+
+        context('when given string "0"', function() {
+            beforeEach(function() {
+                gpio.write(1, '0');
+            });
+
+            it('should normalise to string "0"', function() {
+                sinon.assert.calledOnce(fs.writeFile);
                 var args = fs.writeFile.lastCall.args;
                 assert.equal(args[1], '0');
             });
@@ -307,48 +363,43 @@ describe('rpi-gpio', function() {
     });
 
     describe('destroy', function() {
-        var callback;
-
-        beforeEach(function(done) {
-            var i = 3;
-            [1, 2, 3].forEach(function(pin) {
-                gpio.setup(pin, gpio.DIR_IN, function() {
-                    if (--i === 0) {
-                        onSetupComplete();
-                    }
-                });
-            });
-
-            function onSetupComplete() {
-                fs.writeFile.reset();
-                gpio.destroy(callback);
-            }
-
-            callback = sinon.spy(onDestroy);
-            function onDestroy() {
-                done();
-            }
-        });
-
-        it('should unexport any exported pins', function() {
-            sinon.assert.called(callback);
-
+        context('when pins 1, 2, 3 have been exported', function() {
+            var callback;
             var unexportPath = '/sys/class/gpio/unexport';
-            assert.equal(fs.writeFile.getCall(0).args[0], unexportPath);
-            assert.equal(fs.writeFile.getCall(1).args[0], unexportPath);
-            assert.equal(fs.writeFile.getCall(2).args[0], unexportPath);
 
-            // Paths are unexported in reverse order, so just get them
-            // into an array and sort before asserting
-            var pathsExported = [];
-            [0,1,2].forEach(function(callNumber) {
-                pathsExported.push(fs.writeFile.getCall(callNumber).args[1]);
+            beforeEach(function(done) {
+                var i = 3;
+                [1, 2, 3].forEach(function(pin) {
+                    gpio.setup(pin, gpio.DIR_IN, function() {
+                        if (--i === 0) {
+                            onSetupComplete();
+                        }
+                    });
+                });
+
+                function onSetupComplete() {
+                    fs.writeFile.reset();
+                    gpio.destroy(callback);
+                }
+
+                callback = sinon.spy(onDestroy);
+                function onDestroy() {
+                    done();
+                }
             });
-            pathsExported.sort();
 
-            assert.equal(pathsExported[0], '1');
-            assert.equal(pathsExported[1], '2');
-            assert.equal(pathsExported[2], '3');
+            it('should unexport pin 1', function() {
+                sinon.assert.calledWith(fs.writeFile, unexportPath, '1');
+            });
+
+            it('should unexport pin 2', function() {
+                sinon.assert.calledWith(fs.writeFile, unexportPath, '2');
+            });
+
+            it('should unexport pin 3', function() {
+                sinon.assert.calledWith(fs.writeFile, unexportPath, '3');
+            });
+
         });
     });
 
@@ -384,7 +435,11 @@ describe('rpi-gpio', function() {
                 gpio.setMode(gpio.MODE_RPI);
             });
 
-            context('when using the raspberry pi v1', function() {
+            context('using Raspberry Pi revision 1 hardware', function() {
+                beforeEach(function() {
+                    fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, cpuinfo.v1);
+                });
+
                 var map = {
                     // RPI to BCM
                     '3':  '0',
@@ -409,20 +464,21 @@ describe('rpi-gpio', function() {
                 Object.keys(map).forEach(function(rpiPin) {
                     var bcmPin = map[rpiPin];
 
-                    it('should map RPI pin ' + rpiPin + ' to BCM pin ' + bcmPin, function(done) {
-                        gpio.setup(rpiPin, gpio.DIR_IN, onSetupComplete);
-                        function onSetupComplete() {
-                            assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
-                            done();
-                        }
-                    });
+                    context('writing to RPI pin ' + rpiPin, function() {
+                        beforeEach(function(done) {
+                            gpio.setup(rpiPin, gpio.DIR_IN, done);
+                        });
 
+                        it('should write to pin ' + bcmPin + ' (BCM)', function() {
+                            assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
+                        });
+                    });
                 });
             });
 
-            context('when using the raspberry pi v2', function() {
+            context('using Raspberry Pi revision 2 hardware', function() {
                 beforeEach(function() {
-                    fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, _proc_cpuinfo_v2);
+                    fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, cpuinfo.v2);
                 });
 
                 var map = {
@@ -449,14 +505,15 @@ describe('rpi-gpio', function() {
                 Object.keys(map).forEach(function(rpiPin) {
                     var bcmPin = map[rpiPin];
 
-                    it('should map RPI pin ' + rpiPin + ' to BCM pin ' + bcmPin, function(done) {
-                        gpio.setup(rpiPin, gpio.DIR_IN, onSetupComplete);
-                        function onSetupComplete() {
-                            assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
-                            done();
-                        }
-                    });
+                    context('writing to RPI pin ' + rpiPin, function() {
+                        beforeEach(function(done) {
+                            gpio.setup(rpiPin, gpio.DIR_IN, done);
+                        });
 
+                        it('should write to pin ' + bcmPin + ' (BCM)', function() {
+                            assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
+                        });
+                    });
                 });
             });
 
@@ -470,13 +527,16 @@ describe('rpi-gpio', function() {
             var bcmPins = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
             bcmPins.forEach(function(bcmPin) {
-                it('should return the untranslated BCM pin ' + bcmPin, function(done) {
-                    bcmPin = bcmPin + '';
-                    gpio.setup(bcmPin, gpio.DIR_IN, onSetupComplete);
-                    function onSetupComplete() {
+                bcmPin += '';
+
+                context('writing to BCM pin ' + bcmPin, function() {
+                    beforeEach(function(done) {
+                        gpio.setup(bcmPin, gpio.DIR_IN, done);
+                    });
+
+                    it('should write to the same pin ' + bcmPin + ' (BCM)', function() {
                         assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
-                        done();
-                    }
+                    });
                 });
             });
         });
