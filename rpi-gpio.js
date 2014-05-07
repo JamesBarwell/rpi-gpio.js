@@ -223,6 +223,7 @@ Gpio.prototype.destroy = function(cb) {
 Gpio.prototype.reset = function() {
     this.getPin = this.MODE_RPI;
     this.exportedPins = {};
+    this.removeAllListeners();
 };
 
 function setDirection(pin, direction, cb) {
