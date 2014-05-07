@@ -1,13 +1,13 @@
 var assert = require('assert');
+var fs     = require('fs');
 var mocha  = require('mocha');
 var sinon  = require('sinon');
-var fs     = require('fs');
-var path   = require('path');
 var gpio   = require('../rpi-gpio.js');
 
-var _proc_cpuinfo_v1 = 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0002\nSerial   : 000000009a5d9c22';
-
-var _proc_cpuinfo_v2 = 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0004\nSerial   : 000000009a5d9c22';
+var cpuinfo = {
+    v1: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0002\nSerial   : 000000009a5d9c22',
+    v2: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0004\nSerial   : 000000009a5d9c22'
+}
 
 describe('rpi-gpio', function() {
 
@@ -15,7 +15,8 @@ describe('rpi-gpio', function() {
         sinon.stub(fs, 'writeFile').yieldsAsync();
         sinon.stub(fs, 'exists').yieldsAsync(false);
         sinon.stub(fs, 'watchFile').yieldsAsync();
-        sinon.stub(fs, 'readFile').withArgs('/proc/cpuinfo').yieldsAsync(null, _proc_cpuinfo_v1);
+        sinon.stub(fs, 'readFile')
+            .withArgs('/proc/cpuinfo').yieldsAsync(null, cpuinfo.v1);
     });
 
     beforeEach(function() {
@@ -28,50 +29,97 @@ describe('rpi-gpio', function() {
         fs.watchFile.reset();
     });
 
-    describe('setMode', function() {
-        it('should throw an error if the mode is invalid', function() {
-            assert.throws(function() {
-                gpio.setMode('invalid');
-            }, Error);
-        });
-        it('should emit a modeChange event for RPI', function(done) {
-            gpio.on('modeChange', function(mode) {
-                assert.equal(mode, gpio.MODE_RPI);
-                done();
+    describe('setMode()', function() {
+        context('to RPI mode', function() {
+            var listener;
+
+            beforeEach(function() {
+                listener = sinon.spy();
+                gpio.on('modeChange', listener);
+
+                gpio.setMode(gpio.MODE_RPI);
             });
-            gpio.setMode(gpio.MODE_RPI);
-        });
-        it('should emit a modeChange event for BCM', function(done) {
-            gpio.on('modeChange', function(mode) {
-                assert.equal(mode, gpio.MODE_BCM);
-                done();
+
+            it('should emit a modeChange event and pass the mode callback', function() {
+                sinon.assert.calledOnce(listener);
+                sinon.assert.calledWith(listener, gpio.MODE_RPI);
             });
-            gpio.setMode(gpio.MODE_BCM);
+        });
+
+        context('to BCM mode', function() {
+            var listener;
+
+            beforeEach(function() {
+                listener = sinon.spy();
+                gpio.on('modeChange', listener);
+
+                gpio.setMode(gpio.MODE_BCM);
+            });
+
+            it('should emit a modeChange event and pass the mode callback', function() {
+                sinon.assert.calledOnce(listener);
+                sinon.assert.calledWith(listener, gpio.MODE_BCM);
+            });
+        });
+
+        context('with an invalid mode', function() {
+            var invalidModeSet;
+
+            beforeEach(function() {
+                invalidModeSet = function() {
+                    gpio.setMode('invalid');
+                };
+            });
+
+            it('should throw an error', function() {
+                assert.throws(invalidModeSet, Error);
+            });
         });
     });
 
-    describe('cpuinfo parsing', function() {
+    describe('parseCpuInfo()', function() {
 
-        it('should return the revision', function() {
-            var cpuInfo = gpio.parseCpuinfo(_proc_cpuinfo_v1);
-            assert.equal(cpuInfo, '0002');
+        context('using Raspberry Pi revision 1 hardware', function() {
+            var result;
+
+            beforeEach(function() {
+                result = gpio.parseCpuinfo(cpuinfo.v1);
+            });
+
+            it('should return the revision 0002', function() {
+                assert.equal(result, '0002');
+            });
+        });
+
+        context('using Raspberry Pi revision 2 hardware', function() {
+            var result;
+
+            beforeEach(function() {
+                result = gpio.parseCpuinfo(cpuinfo.v2);
+            });
+
+            it('should return the revision 0004', function() {
+                assert.equal(result, '0004');
+            });
         });
     });
 
     describe('setup()', function() {
-        context('when run with an invalid channel', function() {
+        context('when given an invalid channel', function() {
             var callback;
 
-            beforeEach(function() {
-                callback = sinon.spy();
+            beforeEach(function(done) {
+                callback = sinon.spy(onSetupComplete);
+                function onSetupComplete() {
+                    done();
+                }
+
                 gpio.setup(null, null, callback);
             });
 
-            it('should run the callback with an error if the channel if invalid', function() {
+            it('should run the callback with an error', function() {
                 sinon.assert.calledOnce(callback);
-
-                var errorArg = callback.lastCall.args[0];
-                assert.ok(errorArg);
+                assert.ok(callback.getCall(0).args[0]);
             });
         });
 
@@ -85,13 +133,14 @@ describe('rpi-gpio', function() {
                 });
             });
 
-            it('should unexport and export the channel', function() {
-                sinon.assert.called(fs.writeFile);
-
+            it('should first unexport the channel', function() {
                 var args0 = fs.writeFile.getCall(0).args;
                 assert.equal(args0[0], '/sys/class/gpio/unexport');
                 assert.equal(args0[1], '1');
+            });
 
+
+            it('should second export the channel', function() {
                 var args1 = fs.writeFile.getCall(1).args;
                 assert.equal(args1[0], '/sys/class/gpio/export');
                 assert.equal(args1[1], '1');
