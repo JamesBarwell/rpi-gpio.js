@@ -128,9 +128,7 @@ describe('rpi-gpio', function() {
             beforeEach(function(done) {
                 fs.exists.yieldsAsync(true);
 
-                gpio.setup(1, null, function() {
-                    done();
-                });
+                gpio.setup(1, null, done);
             });
 
             it('should first unexport the channel', function() {
@@ -159,9 +157,7 @@ describe('rpi-gpio', function() {
                     listener = sinon.spy();
                     gpio.on('export', listener);
 
-                    gpio.setup(1, null, function() {
-                        done();
-                    });
+                    gpio.setup(1, null, done);
                 });
 
                 it('should export the channel', function() {
@@ -191,9 +187,7 @@ describe('rpi-gpio', function() {
 
             context('and direction is specified inwards', function() {
                 beforeEach(function(done) {
-                    gpio.setup(1, gpio.DIR_IN, function() {
-                        done();
-                    });
+                    gpio.setup(1, gpio.DIR_IN, done);
                 });
 
                 it('should set the channel direction', function() {
@@ -205,9 +199,7 @@ describe('rpi-gpio', function() {
 
             context('and direction is specified outwards', function() {
                 beforeEach(function(done) {
-                    gpio.setup(1, gpio.DIR_OUT, function() {
-                        done();
-                    });
+                    gpio.setup(1, gpio.DIR_OUT, done);
                 });
 
                 it('should set the channel direction', function() {
@@ -221,10 +213,7 @@ describe('rpi-gpio', function() {
                 var callback;
 
                 beforeEach(function(done) {
-                    function onSetupComplete () {
-                        done();
-                    }
-                    callback = sinon.spy(onSetupComplete);
+                    callback = sinon.spy(done);
                     gpio.setup(1, callback);
                 });
 
@@ -244,11 +233,7 @@ describe('rpi-gpio', function() {
             beforeEach(function(done) {
                 gpio.setup(1, gpio.DIR_OUT, onSetup);
 
-                callback = sinon.spy(onWrite);
-                function onWrite() {
-                    done();
-                }
-
+                callback = sinon.spy(done);
                 function onSetup() {
                     gpio.write(1, true, callback);
                 }
@@ -344,11 +329,7 @@ describe('rpi-gpio', function() {
                 fs.readFile.yieldsAsync(null, '1');
                 gpio.setup(1, gpio.DIR_IN, onSetup);
 
-                callback = sinon.spy(onRead);
-                function onRead() {
-                    done();
-                }
-
+                callback = sinon.spy(done);
                 function onSetup() {
                     gpio.read(1, callback);
                 }
@@ -364,7 +345,6 @@ describe('rpi-gpio', function() {
 
     describe('destroy', function() {
         context('when pins 1, 2, 3 have been exported', function() {
-            var callback;
             var unexportPath = '/sys/class/gpio/unexport';
 
             beforeEach(function(done) {
@@ -379,12 +359,7 @@ describe('rpi-gpio', function() {
 
                 function onSetupComplete() {
                     fs.writeFile.reset();
-                    gpio.destroy(callback);
-                }
-
-                callback = sinon.spy(onDestroy);
-                function onDestroy() {
-                    done();
+                    gpio.destroy(done);
                 }
             });
 
