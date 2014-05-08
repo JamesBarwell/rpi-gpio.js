@@ -1,8 +1,6 @@
-var fs     = require('fs'),
-    util   = require('util'),
-    EventEmitter = require('events').EventEmitter,
-    // path.exists for 0.6.x support
-    path = require('path');
+var fs     = require('fs');
+var util   = require('util');
+var EventEmitter = require('events').EventEmitter;
 
 // Constants
 var PATH = '/sys/class/gpio';
@@ -13,7 +11,6 @@ function Gpio() {
     this.reset();
 }
 util.inherits(Gpio, EventEmitter);
-
 
 var pins = {
     '1':  null,
@@ -250,8 +247,7 @@ function unexportPin(pin, cb) {
 }
 
 function isExported(pin, cb) {
-    // path.exists deprecated in 0.8.0
-    (fs.exists || path.exists)(PATH + '/gpio' + pin, function(exists) {
+    fs.exists(PATH + '/gpio' + pin, function(exists) {
         if (cb) return cb(exists);
     });
 }
