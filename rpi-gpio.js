@@ -52,48 +52,10 @@ Gpio.prototype.DIR_IN  = 'in';
 Gpio.prototype.DIR_OUT = 'out';
 
 Gpio.prototype.MODE_RPI = function(channel) {
-    // RPi to BCM
     return pins[channel] + '';
 };
 Gpio.prototype.MODE_BCM = function(channel) {
     return channel + '';
-};
-
-/**
- * Changes the necessary pins for the Raspberry V2
- */
-Gpio.prototype.changePins = function(newScheme) {
-    Object.keys(newScheme).forEach(function(index) {
-        pins[index] = newScheme[index];
-    });
-};
-
-/**
- * Sets the version of the model
- */
-Gpio.prototype.setRaspberryVersion = function(cb) {
-    var self = this;
-    fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
-
-        data = self.parseCpuinfo(data);
-        data = data.trim().slice(-1);
-
-        if (data == '2' || data == '3') {
-            self.version = 1;
-        } else {
-            self.version = 2;
-        }
-        cb();
-    });
-};
-
-/**
- * Detects if the Raspberry Pi is version 2
- */
-Gpio.prototype.parseCpuinfo = function(data) {
-    var res = data.split('Revision')[1].trim();
-
-    return res[2] + res[3] + res[4] + res[5];
 };
 
 /**
@@ -133,9 +95,9 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     }
 
     var self = this;
-    this.setRaspberryVersion(function() {
+    setRaspberryVersion.call(this, function() {
         if (self.version === 2) {
-            self.changePins(changedPinsV2);
+            changePins(changedPinsV2);
         }
 
         var pin = self.getPin(channel);
@@ -222,6 +184,43 @@ Gpio.prototype.reset = function() {
     this.exportedPins = {};
     this.removeAllListeners();
 };
+
+/**
+ * Changes the necessary pins for the Raspberry V2
+ */
+function changePins(newScheme) {
+    Object.keys(newScheme).forEach(function(index) {
+        pins[index] = newScheme[index];
+    });
+};
+
+/**
+ * Sets the version of the model
+ */
+function setRaspberryVersion(cb) {
+    var self = this;
+    fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
+
+        data = parseCpuinfo(data);
+        data = data.trim().slice(-1);
+
+        if (data == '2' || data == '3') {
+            self.version = 1;
+        } else {
+            self.version = 2;
+        }
+        cb();
+    });
+};
+
+/**
+ * Detects if the Raspberry Pi is version 2
+ */
+function parseCpuinfo(data) {
+    var res = data.split('Revision')[1].trim();
+    return res[2] + res[3] + res[4] + res[5];
+};
+
 
 function setDirection(pin, direction, cb) {
     fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {

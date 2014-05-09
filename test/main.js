@@ -77,32 +77,6 @@ describe('rpi-gpio', function() {
         });
     });
 
-    describe('parseCpuInfo()', function() {
-
-        context('using Raspberry Pi revision 1 hardware', function() {
-            var result;
-
-            beforeEach(function() {
-                result = gpio.parseCpuinfo(cpuinfo.v1);
-            });
-
-            it('should return the revision 0002', function() {
-                assert.equal(result, '0002');
-            });
-        });
-
-        context('using Raspberry Pi revision 2 hardware', function() {
-            var result;
-
-            beforeEach(function() {
-                result = gpio.parseCpuinfo(cpuinfo.v2);
-            });
-
-            it('should return the revision 0004', function() {
-                assert.equal(result, '0004');
-            });
-        });
-    });
 
     describe('setup()', function() {
         context('when given an invalid channel', function() {
