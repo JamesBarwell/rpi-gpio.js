@@ -252,11 +252,7 @@ function exportPin(pin, cb) {
 }
 
 function unexportPin(pin, cb) {
-    unexportPin(pin, cb);
     fs.unwatchFile(PATH + '/gpio' + pin + '/value');
-}
-
-function unexportPin(pin, cb) {
     fs.writeFile(PATH + '/unexport', pin, function(err) {
         if (cb) return cb(err);
     });

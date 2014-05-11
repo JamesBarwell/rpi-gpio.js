@@ -19,6 +19,7 @@ describe('rpi-gpio', function() {
         sinon.stub(fs, 'watchFile').yieldsAsync();
         sinon.stub(fs, 'readFile')
             .withArgs('/proc/cpuinfo').yieldsAsync(null, cpuinfo.v1);
+        sinon.spy(fs, 'unwatchFile');
     });
 
     beforeEach(function() {
@@ -349,6 +350,18 @@ describe('rpi-gpio', function() {
 
             it('should unexport pin 3', function() {
                 sinon.assert.calledWith(fs.writeFile, unexportPath, '3');
+            });
+
+            it('should unwatch pin 1', function() {
+                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio1/value');
+            });
+
+            it('should unwatch pin 2', function() {
+                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio2/value');
+            });
+
+            it('should unwatch pin 3', function() {
+                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio3/value');
             });
 
         });
