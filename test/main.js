@@ -4,6 +4,8 @@ var mocha  = require('mocha');
 var sinon  = require('sinon');
 var gpio   = require('../rpi-gpio.js');
 
+var PATH = '/sys/class/gpio';
+
 var cpuinfo = {
     v1: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0002\nSerial   : 000000009a5d9c22',
     v2: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0004\nSerial   : 000000009a5d9c22'
@@ -107,14 +109,14 @@ describe('rpi-gpio', function() {
 
             it('should first unexport the channel', function() {
                 var args0 = fs.writeFile.getCall(0).args;
-                assert.equal(args0[0], '/sys/class/gpio/unexport');
+                assert.equal(args0[0], PATH + '/unexport');
                 assert.equal(args0[1], '1');
             });
 
 
             it('should second export the channel', function() {
                 var args1 = fs.writeFile.getCall(1).args;
-                assert.equal(args1[0], '/sys/class/gpio/export');
+                assert.equal(args1[0], PATH + '/export');
                 assert.equal(args1[1], '1');
             });
         });
@@ -138,7 +140,7 @@ describe('rpi-gpio', function() {
                     sinon.assert.called(fs.writeFile);
 
                     var args0 = fs.writeFile.getCall(0).args;
-                    assert.equal(args0[0], '/sys/class/gpio/export');
+                    assert.equal(args0[0], PATH + '/export');
                     assert.equal(args0[1], '1');
                 });
 
@@ -149,13 +151,13 @@ describe('rpi-gpio', function() {
 
                 it('should set the channel direction to out by default', function() {
                     var args1 = fs.writeFile.getCall(1).args;
-                    assert.equal(args1[0], '/sys/class/gpio/gpio1/direction');
+                    assert.equal(args1[0], PATH + '/gpio1/direction');
                     assert.equal(args1[1], 'out');
                 });
 
                 it('should set up a file watcher for the value', function() {
                     var args = fs.watchFile.lastCall.args;
-                    assert.equal(args[0], '/sys/class/gpio/gpio1/value');
+                    assert.equal(args[0], PATH + '/gpio1/value');
                 });
             });
 
@@ -166,7 +168,7 @@ describe('rpi-gpio', function() {
 
                 it('should set the channel direction', function() {
                     var args = fs.writeFile.lastCall.args;
-                    assert.equal(args[0], '/sys/class/gpio/gpio1/direction');
+                    assert.equal(args[0], PATH + '/gpio1/direction');
                     assert.equal(args[1], 'in');
                 });
             });
@@ -178,7 +180,7 @@ describe('rpi-gpio', function() {
 
                 it('should set the channel direction', function() {
                     var args = fs.writeFile.lastCall.args;
-                    assert.equal(args[0], '/sys/class/gpio/gpio1/direction');
+                    assert.equal(args[0], PATH + '/gpio1/direction');
                     assert.equal(args[1], 'out');
                 });
             });
@@ -215,7 +217,7 @@ describe('rpi-gpio', function() {
 
             it('should write the value to the file system', function() {
                 var args = fs.writeFile.lastCall.args;
-                assert.equal(args[0], '/sys/class/gpio/gpio1/value');
+                assert.equal(args[0], PATH + '/gpio1/value');
                 assert.equal(args[1], '1');
 
                 sinon.assert.called(callback);
@@ -311,7 +313,7 @@ describe('rpi-gpio', function() {
 
             it('should read the value from the file system', function() {
                 var args = fs.readFile.lastCall.args;
-                assert.equal(args[0], '/sys/class/gpio/gpio1/value');
+                assert.equal(args[0], PATH + '/gpio1/value');
                 sinon.assert.calledWith(callback, null, true);
             });
         });
@@ -319,7 +321,7 @@ describe('rpi-gpio', function() {
 
     describe('destroy', function() {
         context('when pins 1, 2, 3 have been exported', function() {
-            var unexportPath = '/sys/class/gpio/unexport';
+            var unexportPath = PATH + '/unexport';
 
             beforeEach(function(done) {
                 var i = 3;
