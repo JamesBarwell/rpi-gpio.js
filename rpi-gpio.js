@@ -13,38 +13,63 @@ function Gpio() {
 util.inherits(Gpio, EventEmitter);
 
 var pins = {
-    '1':  null,
-    '2':  null,
-    '3':  0,
-    '4':  null,
-    '5':  1,
-    '6':  null,
-    '7':  4,
-    '8':  14,
-    '9':  null,
-    '10': 15,
-    '11': 17,
-    '12': 18,
-    '13': 21,
-    '14': null,
-    '15': 22,
-    '16': 23,
-    '17': null,
-    '18': 24,
-    '19': 10,
-    '20': null,
-    '21': 9,
-    '22': 25,
-    '23': 11,
-    '24': 8,
-    '25': null,
-    '26': 7
-};
-
-var changedPinsV2 = {
-    '3'  : 2,
-    '5'  : 3,
-    '13' : 27
+    current: undefined,
+    v1: {
+        '1':  null,
+        '2':  null,
+        '3':  0,
+        '4':  null,
+        '5':  1,
+        '6':  null,
+        '7':  4,
+        '8':  14,
+        '9':  null,
+        '10': 15,
+        '11': 17,
+        '12': 18,
+        '13': 21,
+        '14': null,
+        '15': 22,
+        '16': 23,
+        '17': null,
+        '18': 24,
+        '19': 10,
+        '20': null,
+        '21': 9,
+        '22': 25,
+        '23': 11,
+        '24': 8,
+        '25': null,
+        '26': 7
+    },
+    v2: {
+        '1':  null,
+        '2':  null,
+        '3':  2,
+        '4':  null,
+        '5':  3,
+        '6':  null,
+        '7':  4,
+        '8':  14,
+        '9':  null,
+        '10': 15,
+        '11': 17,
+        '12': 18,
+        '13': 27,
+        '14': null,
+        '15': 22,
+        '16': 23,
+        '17': null,
+        '18': 24,
+        '19': 10,
+        '20': null,
+        '21': 9,
+        '22': 25,
+        '23': 11,
+        '24': 8,
+        '25': null,
+        '26': 7
+    }
 };
 
 // Constants
@@ -52,7 +77,7 @@ Gpio.prototype.DIR_IN  = 'in';
 Gpio.prototype.DIR_OUT = 'out';
 
 Gpio.prototype.MODE_RPI = function(channel) {
-    return pins[channel] + '';
+    return pins.current[channel] + '';
 };
 Gpio.prototype.MODE_BCM = function(channel) {
     return channel + '';
@@ -96,10 +121,6 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
 
     var self = this;
     setRaspberryVersion.call(this, function() {
-        if (self.version === 2) {
-            changePins(changedPinsV2);
-        }
-
         var pin = self.getPin(channel);
 
         function doExport() {
@@ -183,21 +204,17 @@ Gpio.prototype.reset = function() {
     this.getPin = this.MODE_RPI;
     this.exportedPins = {};
     this.removeAllListeners();
-};
-
-/**
- * Changes the necessary pins for the Raspberry V2
- */
-function changePins(newScheme) {
-    Object.keys(newScheme).forEach(function(index) {
-        pins[index] = newScheme[index];
-    });
+    pins.current = undefined;
 };
 
 /**
  * Sets the version of the model
  */
 function setRaspberryVersion(cb) {
+    if (pins.current) {
+        return cb();
+    }
+
     var self = this;
     fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
 
@@ -205,9 +222,9 @@ function setRaspberryVersion(cb) {
         data = data.trim().slice(-1);
 
         if (data == '2' || data == '3') {
-            self.version = 1;
+            pins.current = pins.v1;
         } else {
-            self.version = 2;
+            pins.current = pins.v2;
         }
         cb();
     });
