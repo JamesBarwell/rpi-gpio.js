@@ -73,15 +73,10 @@ var pins = {
 };
 
 // Constants
-Gpio.prototype.DIR_IN  = 'in';
-Gpio.prototype.DIR_OUT = 'out';
-
-Gpio.prototype.MODE_RPI = function(channel) {
-    return pins.current[channel] + '';
-};
-Gpio.prototype.MODE_BCM = function(channel) {
-    return channel + '';
-};
+Gpio.prototype.DIR_IN   = 'in';
+Gpio.prototype.DIR_OUT  = 'out';
+Gpio.prototype.MODE_RPI = 'mode_rpi';
+Gpio.prototype.MODE_BCM = 'mode_bcm';
 
 /**
  * Set pin reference mode. Defaults to 'rpi'.
@@ -92,7 +87,13 @@ Gpio.prototype.setMode = function(mode) {
     if (mode !== this.MODE_RPI && mode !== this.MODE_BCM) {
         throw new Error('Cannot set invalid mode');
     }
-    this.getPin = mode;
+
+    if (mode === this.MODE_RPI) {
+        getPinForCurrentMode = getPinRpi;
+    } else if (mode === this.MODE_BCM) {
+        getPinForCurrentMode = getPinBcm;
+    }
+
     this.emit('modeChange', mode);
 };
 
@@ -121,7 +122,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
 
     var self = this;
     setRaspberryVersion.call(this, function() {
-        var pin = self.getPin(channel);
+        var pin = getPinForCurrentMode(channel);
 
         function doExport() {
             exportPin(pin, function() {
@@ -156,7 +157,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
  * @param {function} cb      Optional callback
  */
 Gpio.prototype.write = function(channel, value, cb /*err*/ ) {
-    var pin = this.getPin(channel);
+    var pin = getPinForCurrentMode(channel);
     value = (!!value && value !== '0') ? '1' : '0';
     fs.writeFile(PATH + '/gpio' + pin + '/value', value, function(err) {
         if (cb) return cb(err);
@@ -171,7 +172,7 @@ Gpio.prototype.output = Gpio.prototype.write;
  * @param {function} cb      Callback which receives the channel's boolean value
  */
 Gpio.prototype.read = function(channel, cb /*err,value*/) {
-    var pin = this.getPin(channel);
+    var pin = getPinForCurrentMode(channel);
     fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
         data = (data + '').trim() || '0';
         return cb(err, (data === '1' ? true : false));
@@ -201,10 +202,11 @@ Gpio.prototype.destroy = function(cb) {
  * Reset the state of the module
  */
 Gpio.prototype.reset = function() {
-    this.getPin = this.MODE_RPI;
     this.exportedPins = {};
     this.removeAllListeners();
+
     pins.current = undefined;
+    getPinForCurrentMode = getPinRpi;
 };
 
 /**
@@ -236,6 +238,16 @@ function setRaspberryVersion(cb) {
 function parseCpuinfo(data) {
     var res = data.split('Revision')[1].trim();
     return res[2] + res[3] + res[4] + res[5];
+};
+
+var getPinForCurrentMode = getPinRpi;
+
+function getPinRpi(channel) {
+    return pins.current[channel] + '';
+};
+
+function getPinBcm(channel) {
+    return channel + '';
 };
 
 
