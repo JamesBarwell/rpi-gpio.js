@@ -100,6 +100,23 @@ describe('rpi-gpio', function() {
             });
         });
 
+        context('when given an invalid direction', function() {
+            var callback;
+
+            beforeEach(function(done) {
+                callback = sinon.spy(onSetupComplete);
+                function onSetupComplete() {
+                    done();
+                }
+
+                gpio.setup(1, 'foo', callback);
+            });
+
+            it('should run the callback with an error', function() {
+                sinon.assert.calledOnce(callback);
+                assert.ok(callback.getCall(0).args[0]);
+            });
+        });
 
         context('when the channel is already exported', function() {
             beforeEach(function(done) {
