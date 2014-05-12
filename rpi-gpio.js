@@ -84,14 +84,12 @@ Gpio.prototype.MODE_BCM = 'mode_bcm';
  * @param {string} mode Pin reference mode, 'rpi' or 'bcm'
  */
 Gpio.prototype.setMode = function(mode) {
-    if (mode !== this.MODE_RPI && mode !== this.MODE_BCM) {
-        throw new Error('Cannot set invalid mode');
-    }
-
     if (mode === this.MODE_RPI) {
         getPinForCurrentMode = getPinRpi;
     } else if (mode === this.MODE_BCM) {
         getPinForCurrentMode = getPinBcm;
+    } else {
+        throw new Error('Cannot set invalid mode');
     }
 
     this.emit('modeChange', mode);
