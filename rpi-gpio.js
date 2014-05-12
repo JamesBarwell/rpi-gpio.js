@@ -218,10 +218,11 @@ function setRaspberryVersion(cb) {
     var self = this;
     fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
 
-        data = parseCpuinfo(data);
-        data = data.trim().slice(-1);
+        // Match the last 4 digits of the number following "Revision:"
+        var match = data.match(/Revision\s*:\s*\d*(\d{4})/);
+        var revisionNumber = match[1];
 
-        if (data == '2' || data == '3') {
+        if (revisionNumber === '0002' || revisionNumber === '0003') {
             pins.current = pins.v1;
         } else {
             pins.current = pins.v2;
@@ -230,16 +231,7 @@ function setRaspberryVersion(cb) {
     });
 };
 
-/**
- * Detects if the Raspberry Pi is version 2
- */
-function parseCpuinfo(data) {
-    var res = data.split('Revision')[1].trim();
-    return res[2] + res[3] + res[4] + res[5];
-};
-
 var getPinForCurrentMode = getPinRpi;
-
 function getPinRpi(channel) {
     return pins.current[channel] + '';
 };
