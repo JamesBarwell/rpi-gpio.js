@@ -32,6 +32,8 @@ describe('rpi-gpio', function() {
         fs.writeFile.reset();
         fs.exists.reset();
         fs.watchFile.reset();
+        fs.readFile.reset();
+        fs.unwatchFile.reset();
     });
 
     describe('setMode()', function() {
@@ -223,98 +225,84 @@ describe('rpi-gpio', function() {
     });
 
     describe('write()', function() {
-        context('when writing to a pin', function() {
-            var callback;
+        context('when pin 1 has been set up', function() {
+            var onSetup;
 
             beforeEach(function(done) {
+                onSetup = sinon.spy(done);
                 gpio.setup(1, gpio.DIR_OUT, onSetup);
-
-                callback = sinon.spy(done);
-                function onSetup() {
-                    gpio.write(1, true, callback);
-                }
             });
 
-            it('should write the value to the file system', function() {
-                var args = fs.writeFile.lastCall.args;
-                assert.equal(args[0], PATH + '/gpio1/value');
-                assert.equal(args[1], '1');
+            context('and pin 1 is written to with boolean true', function() {
+                beforeEach(function(done) {
+                    gpio.write(1, true, done);
+                });
 
-                sinon.assert.called(callback);
-            });
-        });
+                it('should write the value to the file system', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[0], PATH + '/gpio1/value');
+                    assert.equal(args[1], '1');
 
-        context('when given boolean true', function() {
-            beforeEach(function() {
-                gpio.write(1, true);
-            });
-
-            it('should normalise to string "1"', function() {
-                sinon.assert.calledOnce(fs.writeFile);
-                var args = fs.writeFile.lastCall.args;
-                assert.equal(args[1], '1');
-            });
-        });
-
-        context('when given number 1', function() {
-            beforeEach(function() {
-                gpio.write(1, 1);
+                    sinon.assert.called(onSetup);
+                });
             });
 
-            it('should normalise to string "1"', function() {
-                sinon.assert.calledOnce(fs.writeFile);
-                var args = fs.writeFile.lastCall.args;
-                assert.equal(args[1], '1');
-            });
-        });
+            context('when given number 1', function() {
+                beforeEach(function() {
+                    gpio.write(1, 1);
+                });
 
-        context('when given string "1"', function() {
-            beforeEach(function() {
-                gpio.write(1, 1);
-            });
-
-            it('should normalise to string "1"', function() {
-                sinon.assert.calledOnce(fs.writeFile);
-                var args = fs.writeFile.lastCall.args;
-                assert.equal(args[1], '1');
-            });
-        });
-
-        context('when given boolean false', function() {
-            beforeEach(function() {
-                gpio.write(1, false);
+                it('should normalise to string "1"', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[1], '1');
+                });
             });
 
-            it('should normalise to string "0"', function() {
-                sinon.assert.calledOnce(fs.writeFile);
-                var args = fs.writeFile.lastCall.args;
-                assert.equal(args[1], '0');
-            });
-        });
+            context('when given string "1"', function() {
+                beforeEach(function() {
+                    gpio.write(1, 1);
+                });
 
-        context('when given number 0', function() {
-            beforeEach(function() {
-                gpio.write(1, 0);
+                it('should normalise to string "1"', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[1], '1');
+                });
             });
 
-            it('should normalise to string "0"', function() {
-                sinon.assert.calledOnce(fs.writeFile);
-                var args = fs.writeFile.lastCall.args;
-                assert.equal(args[1], '0');
+            context('when given boolean false', function() {
+                beforeEach(function() {
+                    gpio.write(1, false);
+                });
+
+                it('should normalise to string "0"', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[1], '0');
+                });
+            });
+
+            context('when given number 0', function() {
+                beforeEach(function() {
+                    gpio.write(1, 0);
+                });
+
+                it('should normalise to string "0"', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[1], '0');
+                });
+            });
+
+            context('when given string "0"', function() {
+                beforeEach(function() {
+                    gpio.write(1, '0');
+                });
+
+                it('should normalise to string "0"', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[1], '0');
+                });
             });
         });
 
-        context('when given string "0"', function() {
-            beforeEach(function() {
-                gpio.write(1, '0');
-            });
-
-            it('should normalise to string "0"', function() {
-                sinon.assert.calledOnce(fs.writeFile);
-                var args = fs.writeFile.lastCall.args;
-                assert.equal(args[1], '0');
-            });
-        });
     });
 
     describe('read', function() {
