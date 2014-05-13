@@ -322,24 +322,55 @@ describe('rpi-gpio', function() {
 
     });
 
-    describe('read', function() {
-        var callback;
+    describe('read()', function() {
 
-        context('when the pin is on', function() {
+        context('when pin 1 is setup', function() {
             beforeEach(function(done) {
-                fs.readFile.yieldsAsync(null, '1');
-                gpio.setup(1, gpio.DIR_IN, onSetup);
-
-                callback = sinon.spy(done);
-                function onSetup() {
-                    gpio.read(1, callback);
-                }
+                gpio.setup(1, gpio.DIR_IN, done);
             });
 
-            it('should read the value from the file system', function() {
-                var args = fs.readFile.lastCall.args;
-                assert.equal(args[0], PATH + '/gpio1/value');
-                sinon.assert.calledWith(callback, null, true);
+            context('and pin 1 is on', function() {
+                beforeEach(function() {
+                    fs.readFile.yieldsAsync(null, '1');
+                });
+
+                context('and pin 1 is read', function() {
+                    var callback;
+
+                    beforeEach(function(done) {
+                        callback = sinon.spy(done);
+                        gpio.read(1, callback);
+                    });
+
+                    it('should run the callback with a value boolean true', function() {
+                        var args = fs.readFile.lastCall.args;
+                        assert.equal(args[0], PATH + '/gpio1/value');
+                        sinon.assert.calledWith(callback, null, true);
+                    });
+
+                });
+            });
+
+            context('and pin 1 is off', function() {
+                beforeEach(function() {
+                    fs.readFile.yieldsAsync(null, '0');
+                });
+
+                context('and pin 1 is read', function() {
+                    var callback;
+
+                    beforeEach(function(done) {
+                        callback = sinon.spy(done);
+                        gpio.read(1, callback);
+                    });
+
+                    it('should run the callback with a value boolean false', function() {
+                        var args = fs.readFile.lastCall.args;
+                        assert.equal(args[0], PATH + '/gpio1/value');
+                        sinon.assert.calledWith(callback, null, false);
+                    });
+
+                });
             });
         });
     });
