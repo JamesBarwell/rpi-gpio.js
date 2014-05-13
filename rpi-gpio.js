@@ -156,6 +156,11 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
  */
 Gpio.prototype.write = function(channel, value, cb /*err*/ ) {
     var pin = getPinForCurrentMode(channel);
+
+    if (!this.exportedPins[pin]) {
+        return cb(new Error('Pin has not been exported'));
+    }
+
     value = (!!value && value !== '0') ? '1' : '0';
     fs.writeFile(PATH + '/gpio' + pin + '/value', value, function(err) {
         if (cb) return cb(err);

@@ -225,7 +225,7 @@ describe('rpi-gpio', function() {
     });
 
     describe('write()', function() {
-        context('when pin 1 has been set up', function() {
+        context('when pin 1 has been setup for output', function() {
             var onSetup;
 
             beforeEach(function(done) {
@@ -299,6 +299,23 @@ describe('rpi-gpio', function() {
                 it('should normalise to string "0"', function() {
                     var args = fs.writeFile.lastCall.args;
                     assert.equal(args[1], '0');
+                });
+            });
+
+            context('and pin 2 is written to', function() {
+                var onWrite;
+
+                beforeEach(function(done) {
+                    function write() {
+                        done();
+                    }
+                    onWrite = sinon.spy(write);
+                    gpio.write(2, true, onWrite);
+                });
+
+                it('should run the callback with an error', function() {
+                    sinon.assert.calledOnce(onWrite);
+                    assert.ok(onWrite.getCall(0).args[0]);
                 });
             });
         });
