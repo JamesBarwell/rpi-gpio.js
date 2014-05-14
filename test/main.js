@@ -372,6 +372,23 @@ describe('rpi-gpio', function() {
 
                 });
             });
+
+            context('and pin 2 is read', function() {
+                var callback;
+
+                beforeEach(function(done) {
+                    function onRead() {
+                        done();
+                    }
+                    callback = sinon.spy(onRead);
+                    gpio.read(2, callback);
+                });
+
+                it('should run the callback with an error', function() {
+                    sinon.assert.calledOnce(callback);
+                    assert.ok(callback.getCall(0).args[0]);
+                });
+            });
         });
     });
 

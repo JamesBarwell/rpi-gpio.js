@@ -176,6 +176,11 @@ Gpio.prototype.output = Gpio.prototype.write;
  */
 Gpio.prototype.read = function(channel, cb /*err,value*/) {
     var pin = getPinForCurrentMode(channel);
+
+    if (!this.exportedPins[pin]) {
+        return cb(new Error('Pin has not been exported'));
+    }
+
     fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
         data = (data + '').trim() || '0';
         return cb(err, (data === '1' ? true : false));
