@@ -4,6 +4,8 @@ rpi-gpio.js
 
 Control Raspberry Pi GPIO pins with node.js
 
+[![NPM version](https://badge.fury.io/js/rpi-gpio.svg)](http://badge.fury.io/js/rpi-gpio)
+
 ## Setup
 See this guide on how to get [node.js running on Raspberry Pi](http://elsmorian.com/post/23474168753/node-js-on-raspberry-pi).
 
