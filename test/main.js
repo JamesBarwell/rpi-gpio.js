@@ -149,13 +149,15 @@ describe('rpi-gpio', function() {
             });
 
             context('and minimum arguments are specified', function() {
+                var onSetup;
                 var listener;
 
                 beforeEach(function(done) {
                     listener = sinon.spy();
                     gpio.on('export', listener);
 
-                    gpio.setup(1, null, done);
+                    onSetup = sinon.spy(done);
+                    gpio.setup(1, null, onSetup);
                 });
 
                 it('should export the channel', function() {
@@ -164,6 +166,10 @@ describe('rpi-gpio', function() {
                     var args0 = fs.writeFile.getCall(0).args;
                     assert.equal(args0[0], PATH + '/export');
                     assert.equal(args0[1], '1');
+                });
+
+                it('should run the setup callback', function() {
+                    sinon.assert.calledOnce(onSetup);
                 });
 
                 it('should emit an export event', function() {

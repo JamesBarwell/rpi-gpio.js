@@ -1,6 +1,7 @@
 var fs     = require('fs');
 var util   = require('util');
 var EventEmitter = require('events').EventEmitter;
+var async = require('async');
 
 // Constants
 var PATH = '/sys/class/gpio';
@@ -119,32 +120,37 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     }
 
     var self = this;
-    setRaspberryVersion.call(this, function() {
-        var pin = getPinForCurrentMode(channel);
+    var pin;
 
-        function doExport() {
-            exportPin(pin, function() {
-                self.exportedPins[pin] = true;
-                self.emit('export', channel);
-                setListener(pin, function() {
-                    self.read(channel, function(err, value) {
-                        if (err) return cb(err);
-                        self.emit('change', channel, value);
-                    });
-                });
-                setDirection(pin, direction, cb);
-            });
-        }
-
-        // Unexport pin if already open
-        isExported(pin, function(isOpen) {
-            if (isOpen) {
-                unexportPin(pin, doExport);
-            } else {
-                doExport();
+    async.waterfall([
+        function(next) {
+            setRaspberryVersion(next);
+        },
+        function(next) {
+            pin = getPinForCurrentMode(channel);
+            isExported(pin, next);
+        },
+        function(isExported, next) {
+            if (isExported) {
+                return unexportPin(pin, next);
             }
-        }.bind(self));
-    });
+            return next(null);
+        },
+        function(next) {
+            exportPin(pin, next);
+        },
+        function(next) {
+            self.exportedPins[pin] = true;
+            self.emit('export', channel);
+            setListener(pin, function() {
+                self.read(channel, function(err, value) {
+                    if (err) return cb(err);
+                    self.emit('change', channel, value);
+                });
+            });
+            setDirection(pin, direction, next);
+        }
+    ], cb);
 };
 
 /**
@@ -222,11 +228,11 @@ Gpio.prototype.reset = function() {
  */
 function setRaspberryVersion(cb) {
     if (pins.current) {
-        return cb();
+        return cb(null);
     }
 
-    var self = this;
     fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
+        if (err) return cb(err);
 
         // Match the last 4 digits of the number following "Revision:"
         var match = data.match(/Revision\s*:\s*\d*(\d{4})/);
@@ -237,7 +243,8 @@ function setRaspberryVersion(cb) {
         } else {
             pins.current = pins.v2;
         }
-        cb();
+
+        return cb(null);
     });
 };
 
@@ -272,7 +279,7 @@ function unexportPin(pin, cb) {
 
 function isExported(pin, cb) {
     fs.exists(PATH + '/gpio' + pin, function(exists) {
-        if (cb) return cb(exists);
+        return cb(null, exists);
     });
 }
 

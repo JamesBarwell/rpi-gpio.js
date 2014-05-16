@@ -27,5 +27,8 @@
   },
   "author": "James Barwell <jb@jamesbarwell.co.uk>",
   "license": "MIT",
-  "readmeFilename": "README.md"
+  "readmeFilename": "README.md",
+  "dependencies": {
+    "async": "~0.8.0"
+  }
 }
