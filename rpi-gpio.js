@@ -119,9 +119,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
         return cb(new Error('Cannot set invalid direction'));
     }
 
-    var self = this;
     var pin;
-
     async.waterfall([
         function(next) {
             setRaspberryVersion(next);
@@ -140,16 +138,11 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
             exportPin(pin, next);
         },
         function(next) {
-            self.exportedPins[pin] = true;
-            self.emit('export', channel);
-            setListener(pin, function() {
-                self.read(channel, function(err, value) {
-                    if (err) return cb(err);
-                    self.emit('change', channel, value);
-                });
-            });
+            this.exportedPins[pin] = true;
+            this.emit('export', channel);
+            createListener.call(this, channel, pin);
             setDirection(pin, direction, next);
-        }
+        }.bind(this)
     ], cb);
 };
 
@@ -257,6 +250,15 @@ function getPinBcm(channel) {
     return channel + '';
 };
 
+function createListener(channel, pin) {
+    var self = this;
+    fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
+        self.read(channel, function(err, value) {
+            if (err) return cb(err);
+            self.emit('change', channel, value);
+        });
+    });
+}
 
 function setDirection(pin, direction, cb) {
     fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
@@ -281,10 +283,6 @@ function isExported(pin, cb) {
     fs.exists(PATH + '/gpio' + pin, function(exists) {
         return cb(null, exists);
     });
-}
-
-function setListener(pin, cb) {
-    fs.watchFile(PATH + '/gpio' + pin + '/value', cb);
 }
 
 module.exports = new Gpio;
