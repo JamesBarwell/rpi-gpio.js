@@ -182,27 +182,23 @@ Gpio.prototype.read = function(channel, cb /*err,value*/) {
 
     fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
         data = (data + '').trim() || '0';
-        return cb(err, (data === '1' ? true : false));
+        return cb(err, data === '1');
     });
 };
 Gpio.prototype.input = Gpio.prototype.read;
 
 /**
- * Unexport any open pins
+ * Unexport any pins setup by this module
  *
  * @param {function} cb Optional callback
  */
 Gpio.prototype.destroy = function(cb) {
-    var pins = Object.keys(this.exportedPins);
-    var pinCount = pins.length;
-    while (pinCount--) {
-        var pin = pins[pinCount];
-        if (pinCount === 0 && cb) {
-            unexportPin(pin, cb);
-        } else {
-            unexportPin(pin);
+    var tasks = Object.keys(this.exportedPins).map(function(pin) {
+        return function(done) {
+            unexportPin(pin, done);
         }
-    }
+    });
+    async.parallel(tasks, cb);
 };
 
 /**
