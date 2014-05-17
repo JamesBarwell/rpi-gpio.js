@@ -3,7 +3,6 @@ var util   = require('util');
 var EventEmitter = require('events').EventEmitter;
 var async = require('async');
 
-// Constants
 var PATH = '/sys/class/gpio';
 
 // Constructor
@@ -80,9 +79,9 @@ Gpio.prototype.MODE_RPI = 'mode_rpi';
 Gpio.prototype.MODE_BCM = 'mode_bcm';
 
 /**
- * Set pin reference mode. Defaults to 'rpi'.
+ * Set pin reference mode. Defaults to 'mode_rpi'.
  *
- * @param {string} mode Pin reference mode, 'rpi' or 'bcm'
+ * @param {string} mode Pin reference mode, 'mode_rpi' or 'mode_bcm'
  */
 Gpio.prototype.setMode = function(mode) {
     if (mode === this.MODE_RPI) {
@@ -161,9 +160,7 @@ Gpio.prototype.write = function(channel, value, cb /*err*/ ) {
     }
 
     value = (!!value && value !== '0') ? '1' : '0';
-    fs.writeFile(PATH + '/gpio' + pin + '/value', value, function(err) {
-        if (cb) return cb(err);
-    }.bind(this));
+    fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb || function () {});
 };
 Gpio.prototype.output = Gpio.prototype.write;
 
