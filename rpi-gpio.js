@@ -221,10 +221,10 @@ function setRaspberryVersion(cb) {
         if (err) return cb(err);
 
         // Match the last 4 digits of the number following "Revision:"
-        var match = data.match(/Revision\s*:\s*\d*(\d{4})/);
-        var revisionNumber = match[1];
+        var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+        var revisionNumber = parseInt(match[1], 16);
 
-        if (revisionNumber === '0002' || revisionNumber === '0003') {
+        if (revisionNumber < 3) {
             pins.current = pins.v1;
         } else {
             pins.current = pins.v2;
