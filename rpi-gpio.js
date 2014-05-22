@@ -104,7 +104,9 @@ Gpio.prototype.setMode = function(mode) {
  */
 Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     if (!channel) {
-        return cb(new Error('Channel not specified'));
+        return process.nextTick(function() {
+            cb(new Error('Channel not specified'));
+        });
     }
 
     direction = direction || this.DIR_OUT;
@@ -115,7 +117,9 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
     }
 
     if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
-        return cb(new Error('Cannot set invalid direction'));
+        return process.nextTick(function() {
+            cb(new Error('Cannot set invalid direction'));
+        });
     }
 
     var pin;
@@ -156,7 +160,9 @@ Gpio.prototype.write = function(channel, value, cb /*err*/ ) {
     var pin = getPinForCurrentMode(channel);
 
     if (!this.exportedPins[pin]) {
-        return cb(new Error('Pin has not been exported'));
+        return process.nextTick(function() {
+            cb(new Error('Pin has not been exported'));
+        });
     }
 
     value = (!!value && value !== '0') ? '1' : '0';
@@ -174,7 +180,9 @@ Gpio.prototype.read = function(channel, cb /*err,value*/) {
     var pin = getPinForCurrentMode(channel);
 
     if (!this.exportedPins[pin]) {
-        return cb(new Error('Pin has not been exported'));
+        return process.nextTick(function() {
+            cb(new Error('Pin has not been exported'));
+        });
     }
 
     fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
