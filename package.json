@@ -29,6 +29,7 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
-    "async": "~0.8.0"
+    "async": "~0.8.0",
+    "debug": "~0.8.1"
   }
 }

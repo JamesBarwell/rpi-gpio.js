@@ -1,7 +1,8 @@
-var fs     = require('fs');
-var util   = require('util');
+var fs           = require('fs');
+var util         = require('util');
 var EventEmitter = require('events').EventEmitter;
-var async = require('async');
+var async        = require('async');
+var debug        = require('debug')('rpi-gpio');
 
 var PATH = '/sys/class/gpio';
 
@@ -122,6 +123,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
         });
     }
 
+
     var pin;
     async.waterfall([
         function(next) {
@@ -129,6 +131,7 @@ Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
         },
         function(next) {
             pin = getPinForCurrentMode(channel);
+            debug('set up pin %d', pin);
             isExported(pin, next);
         },
         function(isExported, next) {
@@ -231,12 +234,14 @@ function setRaspberryVersion(cb) {
         // Match the last 4 digits of the number following "Revision:"
         var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
         var revisionNumber = parseInt(match[1], 16);
+        var pinVersion = (revisionNumber < 3) ? 'v1' : 'v2';
 
-        if (revisionNumber < 3) {
-            pins.current = pins.v1;
-        } else {
-            pins.current = pins.v2;
-        }
+        debug(
+            'seen hardware revision %d; using pin mode %s',
+            revisionNumber,
+            pinVersion
+        );
+        pins.current = pins[pinVersion];
 
         return cb(null);
     });
@@ -252,6 +257,7 @@ function getPinBcm(channel) {
 };
 
 function createListener(channel, pin) {
+    debug('listen for pin %d', pin);
     var self = this;
     fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
         self.read(channel, function(err, value) {
@@ -262,18 +268,21 @@ function createListener(channel, pin) {
 }
 
 function setDirection(pin, direction, cb) {
+    debug('set direction %s on pin %d', direction.toUpperCase(), pin);
     fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
         if (cb) return cb(err);
     });
 }
 
 function exportPin(pin, cb) {
+    debug('export pin %d', pin);
     fs.writeFile(PATH + '/export', pin, function(err) {
         if (cb) return cb(err);
     });
 }
 
 function unexportPin(pin, cb) {
+    debug('unexport pin %d', pin);
     fs.unwatchFile(PATH + '/gpio' + pin + '/value');
     fs.writeFile(PATH + '/unexport', pin, function(err) {
         if (cb) return cb(err);
