@@ -6,15 +6,7 @@ var debug        = require('debug')('rpi-gpio');
 
 var PATH = '/sys/class/gpio';
 
-// Constructor
-function Gpio() {
-    EventEmitter.call(this);
-    this.reset();
-}
-util.inherits(Gpio, EventEmitter);
-
 var pins = {
-    current: undefined,
     v1: {
         '1':  null,
         '2':  null,
@@ -73,158 +65,169 @@ var pins = {
     }
 };
 
-// Constants
-Gpio.prototype.DIR_IN   = 'in';
-Gpio.prototype.DIR_OUT  = 'out';
-Gpio.prototype.MODE_RPI = 'mode_rpi';
-Gpio.prototype.MODE_BCM = 'mode_bcm';
+function Gpio() {
+    var currentPins;
+    var exportedPins = {};
+    var getPinForCurrentMode = getPinRpi;
 
-/**
- * Set pin reference mode. Defaults to 'mode_rpi'.
- *
- * @param {string} mode Pin reference mode, 'mode_rpi' or 'mode_bcm'
- */
-Gpio.prototype.setMode = function(mode) {
-    if (mode === this.MODE_RPI) {
-        getPinForCurrentMode = getPinRpi;
-    } else if (mode === this.MODE_BCM) {
-        getPinForCurrentMode = getPinBcm;
-    } else {
-        throw new Error('Cannot set invalid mode');
-    }
+    this.DIR_IN   = 'in';
+    this.DIR_OUT  = 'out';
+    this.MODE_RPI = 'mode_rpi';
+    this.MODE_BCM = 'mode_bcm';
 
-    this.emit('modeChange', mode);
-};
-
-/**
- * Setup a channel for use as an input or output
- *
- * @param {number}   channel   Reference to the pin in the current mode's schema
- * @param {string}   direction The pin direction, either 'in' or 'out'
- * @param {function} cb        Optional callback
- */
-Gpio.prototype.setup = function(channel, direction, cb /*err*/) {
-    if (!channel) {
-        return process.nextTick(function() {
-            cb(new Error('Channel not specified'));
-        });
-    }
-
-    direction = direction || this.DIR_OUT;
-
-    if (typeof direction === 'function') {
-        cb = direction;
-        direction = this.DIR_OUT;
-    }
-
-    if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
-        return process.nextTick(function() {
-            cb(new Error('Cannot set invalid direction'));
-        });
-    }
-
-
-    var pin;
-    async.waterfall([
-        function(next) {
-            setRaspberryVersion(next);
-        },
-        function(next) {
-            pin = getPinForCurrentMode(channel);
-            debug('set up pin %d', pin);
-            isExported(pin, next);
-        },
-        function(isExported, next) {
-            if (isExported) {
-                return unexportPin(pin, next);
-            }
-            return next(null);
-        },
-        function(next) {
-            exportPin(pin, next);
-        },
-        function(next) {
-            this.exportedPins[pin] = true;
-            this.emit('export', channel);
-            createListener.call(this, channel, pin);
-            setDirection(pin, direction, next);
-        }.bind(this)
-    ], cb);
-};
-
-/**
- * Write a value to a channel
- *
- * @param {number}   channel The channel to write to
- * @param {boolean}  value   If true, turns the channel on, else turns off
- * @param {function} cb      Optional callback
- */
-Gpio.prototype.write = function(channel, value, cb /*err*/ ) {
-    var pin = getPinForCurrentMode(channel);
-
-    if (!this.exportedPins[pin]) {
-        return process.nextTick(function() {
-            cb(new Error('Pin has not been exported'));
-        });
-    }
-
-    value = (!!value && value !== '0') ? '1' : '0';
-    fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb || function () {});
-};
-Gpio.prototype.output = Gpio.prototype.write;
-
-/**
- * Read a value from a channel
- *
- * @param {number}   channel The channel to read from
- * @param {function} cb      Callback which receives the channel's boolean value
- */
-Gpio.prototype.read = function(channel, cb /*err,value*/) {
-    var pin = getPinForCurrentMode(channel);
-
-    if (!this.exportedPins[pin]) {
-        return process.nextTick(function() {
-            cb(new Error('Pin has not been exported'));
-        });
-    }
-
-    fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
-        data = (data + '').trim() || '0';
-        return cb(err, data === '1');
-    });
-};
-Gpio.prototype.input = Gpio.prototype.read;
-
-/**
- * Unexport any pins setup by this module
- *
- * @param {function} cb Optional callback
- */
-Gpio.prototype.destroy = function(cb) {
-    var tasks = Object.keys(this.exportedPins).map(function(pin) {
-        return function(done) {
-            unexportPin(pin, done);
+    /**
+     * Set pin reference mode. Defaults to 'mode_rpi'.
+     *
+     * @param {string} mode Pin reference mode, 'mode_rpi' or 'mode_bcm'
+     */
+    this.setMode = function(mode) {
+        if (mode === this.MODE_RPI) {
+            getPinForCurrentMode = getPinRpi;
+        } else if (mode === this.MODE_BCM) {
+            getPinForCurrentMode = getPinBcm;
+        } else {
+            throw new Error('Cannot set invalid mode');
         }
-    });
-    async.parallel(tasks, cb);
-};
 
-/**
- * Reset the state of the module
- */
-Gpio.prototype.reset = function() {
-    this.exportedPins = {};
-    this.removeAllListeners();
+        this.emit('modeChange', mode);
+    };
 
-    pins.current = undefined;
-    getPinForCurrentMode = getPinRpi;
-};
+    /**
+     * Setup a channel for use as an input or output
+     *
+     * @param {number}   channel   Reference to the pin in the current mode's schema
+     * @param {string}   direction The pin direction, either 'in' or 'out'
+     * @param {function} cb        Optional callback
+     */
+    this.setup = function(channel, direction, cb /*err*/) {
+        if (!channel) {
+            return process.nextTick(function() {
+                cb(new Error('Channel not specified'));
+            });
+        }
 
-/**
- * Sets the version of the model
- */
-function setRaspberryVersion(cb) {
-    if (pins.current) {
+        direction = direction || this.DIR_OUT;
+
+        if (typeof direction === 'function') {
+            cb = direction;
+            direction = this.DIR_OUT;
+        }
+
+        if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
+            return process.nextTick(function() {
+                cb(new Error('Cannot set invalid direction'));
+            });
+        }
+
+
+        var pin;
+        async.waterfall([
+            function(next) {
+                setRaspberryVersion(currentPins, function(err, pinSchema) {
+                    if (err) next(err);
+                    currentPins = pinSchema;
+                    next();
+                });
+            },
+            function(next) {
+                pin = getPinForCurrentMode(currentPins, channel);
+                debug('set up pin %d', pin);
+                isExported(pin, next);
+            },
+            function(isExported, next) {
+                if (isExported) {
+                    return unexportPin(pin, next);
+                }
+                return next(null);
+            },
+            function(next) {
+                exportPin(pin, next);
+            },
+            function(next) {
+                exportedPins[pin] = true;
+                this.emit('export', channel);
+                createListener.call(this, channel, pin);
+                setDirection(pin, direction, next);
+            }.bind(this)
+        ], cb);
+    };
+
+    /**
+     * Write a value to a channel
+     *
+     * @param {number}   channel The channel to write to
+     * @param {boolean}  value   If true, turns the channel on, else turns off
+     * @param {function} cb      Optional callback
+     */
+    this.write = this.output = function(channel, value, cb /*err*/ ) {
+        var pin = getPinForCurrentMode(currentPins, channel);
+
+        if (!exportedPins[pin]) {
+            return process.nextTick(function() {
+                cb(new Error('Pin has not been exported'));
+            });
+        }
+
+        value = (!!value && value !== '0') ? '1' : '0';
+        fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb || function () {});
+    };
+
+    /**
+     * Read a value from a channel
+     *
+     * @param {number}   channel The channel to read from
+     * @param {function} cb      Callback which receives the channel's boolean value
+     */
+    this.read = this.input = function(channel, cb /*err,value*/) {
+        var pin = getPinForCurrentMode(currentPins, channel);
+
+        if (!exportedPins[pin]) {
+            return process.nextTick(function() {
+                cb(new Error('Pin has not been exported'));
+            });
+        }
+
+        fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
+            data = (data + '').trim() || '0';
+            return cb(err, data === '1');
+        });
+    };
+
+    /**
+     * Unexport any pins setup by this module
+     *
+     * @param {function} cb Optional callback
+     */
+    this.destroy = function(cb) {
+        var tasks = Object.keys(exportedPins).map(function(pin) {
+            return function(done) {
+                unexportPin(pin, done);
+            }
+        });
+        async.parallel(tasks, cb);
+    };
+
+    /**
+     * Reset the state of the module
+     */
+    this.reset = function() {
+        exportedPins = {};
+        this.removeAllListeners();
+
+        currentPins = undefined;
+        exportedPins = {};
+        getPinForCurrentMode = getPinRpi;
+    };
+
+    // Init
+    EventEmitter.call(this);
+    this.reset();
+}
+util.inherits(Gpio, EventEmitter);
+
+
+function setRaspberryVersion(currentPins, cb) {
+    if (currentPins) {
         return cb(null);
     }
 
@@ -241,18 +244,16 @@ function setRaspberryVersion(cb) {
             revisionNumber,
             pinVersion
         );
-        pins.current = pins[pinVersion];
 
-        return cb(null);
+        return cb(null, pins[pinVersion]);
     });
 };
 
-var getPinForCurrentMode = getPinRpi;
-function getPinRpi(channel) {
-    return pins.current[channel] + '';
+function getPinRpi(currentPins, channel) {
+    return currentPins[channel] + '';
 };
 
-function getPinBcm(channel) {
+function getPinBcm(currentPins, channel) {
     return channel + '';
 };
 
