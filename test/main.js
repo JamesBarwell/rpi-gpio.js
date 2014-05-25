@@ -7,10 +7,11 @@ var gpio   = require('../rpi-gpio.js');
 var PATH = '/sys/class/gpio';
 
 var cpuinfo = {
-    v1: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0002\nSerial   : 000000009a5d9c22',
-    v1Overvolted: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 100000002\nSerial   : 000000009a5d9c22',
-    v2: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 000e\nSerial   : 000000009a5d9c22',
-    v2Overvolted: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 10000003\nSerial   : 000000009a5d9c22'
+    v1: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0003\nSerial   : 000000009a5d9c22',
+    v1Overvolted: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 100000003\nSerial   : 000000009a5d9c22',
+    v2: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 0004\nSerial   : 000000009a5d9c22',
+    v2Overvolted: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 10000004\nSerial   : 000000009a5d9c22',
+    v2latest: 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : 000f\nSerial   : 000000009a5d9c22'
 }
 
 describe('rpi-gpio', function() {
@@ -558,6 +559,48 @@ describe('rpi-gpio', function() {
                     });
                 });
             });
+
+            context('using Raspberry Pi latest revision 2 hardware', function() {
+                beforeEach(function() {
+                    fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, cpuinfo.v2latest);
+                });
+
+                var map = {
+                    // RPI to BCM
+                    '3':  '2',
+                    '5':  '3',
+                    '7':  '4',
+                    '8':  '14',
+                    '10': '15',
+                    '11': '17',
+                    '12': '18',
+                    '13': '27',
+                    '15': '22',
+                    '16': '23',
+                    '18': '24',
+                    '19': '10',
+                    '21': '9',
+                    '22': '25',
+                    '23': '11',
+                    '24': '8',
+                    '26': '7'
+                }
+
+                Object.keys(map).forEach(function(rpiPin) {
+                    var bcmPin = map[rpiPin];
+
+                    context('writing to RPI pin ' + rpiPin, function() {
+                        beforeEach(function(done) {
+                            gpio.setup(rpiPin, gpio.DIR_IN, done);
+                        });
+
+                        it('should write to pin ' + bcmPin + ' (BCM)', function() {
+                            assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
+                        });
+                    });
+                });
+            });
+
 
             context('using Raspberry Pi revision 1 hardware overvolted', function() {
                 beforeEach(function() {
