@@ -132,7 +132,7 @@ function Gpio() {
                 });
             },
             function(next) {
-                pin = getPinForCurrentMode(currentPins, channel);
+                pin = getPinForCurrentMode(channel);
                 debug('set up pin %d', pin);
                 isExported(pin, next);
             },
@@ -162,7 +162,7 @@ function Gpio() {
      * @param {function} cb      Optional callback
      */
     this.write = this.output = function(channel, value, cb /*err*/ ) {
-        var pin = getPinForCurrentMode(currentPins, channel);
+        var pin = getPinForCurrentMode(channel);
 
         if (!exportedPins[pin]) {
             return process.nextTick(function() {
@@ -181,7 +181,7 @@ function Gpio() {
      * @param {function} cb      Callback which receives the channel's boolean value
      */
     this.read = this.input = function(channel, cb /*err,value*/) {
-        var pin = getPinForCurrentMode(currentPins, channel);
+        var pin = getPinForCurrentMode(channel);
 
         if (!exportedPins[pin]) {
             return process.nextTick(function() {
@@ -226,8 +226,7 @@ function Gpio() {
     this.reset();
 
 
-    // Private
-
+    // Private functions requring access to state
     function setRaspberryVersion(cb) {
         if (currentPins) {
             return cb(null);
@@ -250,28 +249,27 @@ function Gpio() {
             return cb(null, pins[pinVersion]);
         });
     };
+
+    function getPinRpi(channel) {
+        return currentPins[channel] + '';
+    };
+
+    function getPinBcm(channel) {
+        return channel + '';
+    };
+
+    function createListener(channel, pin) {
+        debug('listen for pin %d', pin);
+        var Gpio = this;
+        fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
+            Gpio.read(channel, function(err, value) {
+                if (err) return cb(err);
+                Gpio.emit('change', channel, value);
+            });
+        });
+    }
 }
 util.inherits(Gpio, EventEmitter);
-
-
-function getPinRpi(currentPins, channel) {
-    return currentPins[channel] + '';
-};
-
-function getPinBcm(currentPins, channel) {
-    return channel + '';
-};
-
-function createListener(channel, pin) {
-    debug('listen for pin %d', pin);
-    var self = this;
-    fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
-        self.read(channel, function(err, value) {
-            if (err) return cb(err);
-            self.emit('change', channel, value);
-        });
-    });
-}
 
 function setDirection(pin, direction, cb) {
     debug('set direction %s on pin %d', direction.toUpperCase(), pin);
