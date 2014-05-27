@@ -5,8 +5,7 @@ var async        = require('async');
 var debug        = require('debug')('rpi-gpio');
 
 var PATH = '/sys/class/gpio';
-
-var pins = {
+var PINS = {
     v1: {
         '1':  null,
         '2':  null,
@@ -120,7 +119,7 @@ function Gpio() {
         }
 
 
-        var pin;
+        var pinForSetup;
         async.waterfall([
             function(next) {
                 setRaspberryVersion(function(err, pinSchema) {
@@ -132,24 +131,24 @@ function Gpio() {
                 });
             },
             function(next) {
-                pin = getPinForCurrentMode(channel);
-                debug('set up pin %d', pin);
-                isExported(pin, next);
+                pinForSetup = getPinForCurrentMode(channel);
+                debug('set up pin %d', pinForSetup);
+                isExported(pinForSetup, next);
             },
             function(isExported, next) {
                 if (isExported) {
-                    return unexportPin(pin, next);
+                    return unexportPin(pinForSetup, next);
                 }
                 return next(null);
             },
             function(next) {
-                exportPin(pin, next);
+                exportPin(pinForSetup, next);
             },
             function(next) {
-                exportedPins[pin] = true;
+                exportedPins[pinForSetup] = true;
                 this.emit('export', channel);
-                createListener.call(this, channel, pin);
-                setDirection(pin, direction, next);
+                createListener.call(this, channel, pinForSetup);
+                setDirection(pinForSetup, direction, next);
             }.bind(this)
         ], cb);
     };
@@ -246,7 +245,7 @@ function Gpio() {
                 pinVersion
             );
 
-            return cb(null, pins[pinVersion]);
+            return cb(null, PINS[pinVersion]);
         });
     };
 
