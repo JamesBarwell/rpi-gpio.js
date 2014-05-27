@@ -123,9 +123,11 @@ function Gpio() {
         var pin;
         async.waterfall([
             function(next) {
-                setRaspberryVersion(currentPins, function(err, pinSchema) {
+                setRaspberryVersion(function(err, pinSchema) {
                     if (err) next(err);
-                    currentPins = pinSchema;
+                    if (pinSchema) {
+                        currentPins = pinSchema;
+                    }
                     next();
                 });
             },
@@ -222,32 +224,35 @@ function Gpio() {
     // Init
     EventEmitter.call(this);
     this.reset();
+
+
+    // Private
+
+    function setRaspberryVersion(cb) {
+        if (currentPins) {
+            return cb(null);
+        }
+
+        fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
+            if (err) return cb(err);
+
+            // Match the last 4 digits of the number following "Revision:"
+            var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+            var revisionNumber = parseInt(match[1], 16);
+            var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
+
+            debug(
+                'seen hardware revision %d; using pin mode %s',
+                revisionNumber,
+                pinVersion
+            );
+
+            return cb(null, pins[pinVersion]);
+        });
+    };
 }
 util.inherits(Gpio, EventEmitter);
 
-
-function setRaspberryVersion(currentPins, cb) {
-    if (currentPins) {
-        return cb(null);
-    }
-
-    fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
-        if (err) return cb(err);
-
-        // Match the last 4 digits of the number following "Revision:"
-        var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
-        var revisionNumber = parseInt(match[1], 16);
-        var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
-
-        debug(
-            'seen hardware revision %d; using pin mode %s',
-            revisionNumber,
-            pinVersion
-        );
-
-        return cb(null, pins[pinVersion]);
-    });
-};
 
 function getPinRpi(currentPins, channel) {
     return currentPins[channel] + '';
