@@ -1,27 +1,66 @@
 rpi-gpio.js
 ==========
 
-
 Control Raspberry Pi GPIO pins with node.js
 
 [![Build Status](https://travis-ci.org/JamesBarwell/rpi-gpio.js.svg?branch=master)](https://travis-ci.org/JamesBarwell/rpi-gpio.js)
 [![NPM version](https://badge.fury.io/js/rpi-gpio.svg)](http://badge.fury.io/js/rpi-gpio)
 
 ## Setup
-See this guide on how to get [node.js running on Raspberry Pi](http://elsmorian.com/post/23474168753/node-js-on-raspberry-pi).
+See this guide on how to get [node.js running on Raspberry Pi](http://joshondesign.com/2013/10/23/noderpi).
 
-This module can be installed with npm:
+This module can then be installed with npm:
 ```js
 npm install rpi-gpio
 ```
 
 ## Usage
-Please see the examples below. Make make sure you are running as root or with sudo, else the Raspberry Pi will not let you output to the GPIO. All of the functions relating to the pins within this module are asynchronous, so where necessary - for example in reading the value of a pin - a callback must be provided.
+Firstly, make make sure you are running your application as root or with sudo, else the Raspberry Pi will not let you output to the GPIO.
 
-Please note that there are two different ways to reference a channel; either using the Raspberry Pi or the BCM/SoC naming schema (sadly, neither of which match the physical pins!). This module supports both schemas, with Raspberry Pi being the default. Please see [this page](http://elinux.org/RPi_Low-level_peripherals) for more details.
+Before you can read or write, you must use setup() to open a channel, and must specify whether it will be used for input or output. Having done this, you can then read in the state of the channel or write a value to it using read() or write().
 
+All of the functions relating to the pin state within this module are asynchronous, so where necessary - for example in reading the value of a channel - a callback must be provided. This module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use its functions to listen to events.
 
-### Query the value of a pin
+Please note that there are two different and confusing ways to reference a channel; either using the Raspberry Pi or the BCM/SoC naming schema (sadly, neither of which match the physical pins!). This module supports both schemas, with Raspberry Pi being the default. Please see [this page](http://elinux.org/RPi_Low-level_peripherals) for more details.
+
+## API
+
+### setup(channel [, direction], callback)
+Sets up a channel for read or write. Must be done before the channel can be used.
+* channel: Reference to the pin in the current mode's schema.
+* direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. Defaults to DIR_OUT.
+* callback: Provides Error as the first argument if an error occured.
+
+### read(channel, callback)
+Reads the value of a channel.
+* channel: Reference to the pin in the current mode's schema.
+* callback: Provides Error as the first argument if an error occured, otherwise the pin value boolean as the second argument.
+
+### write(channel, value [, callback])
+Writes the value of a channel.
+* channel: Reference to the pin in the current mode's schema.
+* value: Boolean value to specify whether the channel will turn on or off.
+* callback: Provides Error as the first argument if an error occured.
+
+### setMode(mode)
+Sets the channel addressing schema.
+* mode: Specify either Raspberry Pi or SoC/BCM pin schemas, by passing MODE_RPI or MODE_BCM. Defaults to MODE_RPI.
+
+### input()
+Alias of read().
+
+### output()
+Alias of write().
+
+### destroy()
+Tears down any previously set up channels.
+
+### reset()
+Tears down the module state - used for testing.
+
+## Examples
+
+### Setup and read the value of a pin
 ```js
 var gpio = require('rpi-gpio');
 
@@ -34,18 +73,7 @@ function readInput() {
 }
 ```
 
-### Listen for changes on a pin
-The GPIO module inherits from `EventEmitter` so any of the [EventEmitter functions](http://nodejs.org/api/events.html) can be used. The example below shows how to listen for a change in value to a channel.
-```js
-var gpio = require('rpi-gpio');
-
-gpio.on('change', function(channel, value) {
-	console.log('Channel ' + channel + ' value is now ' + value);
-});
-gpio.setup(7, gpio.DIR_IN);
-```
-
-### Write to a pin
+### Setup and write to a pin
 ```js
 var gpio = require('rpi-gpio');
 
@@ -59,8 +87,17 @@ function write() {
 }
 ```
 
-### Unexport pins when finished
-This will close any pins that were opened by the module.
+### Listen for changes on a pin
+```js
+var gpio = require('rpi-gpio');
+
+gpio.on('change', function(channel, value) {
+	console.log('Channel ' + channel + ' value is now ' + value);
+});
+gpio.setup(7, gpio.DIR_IN);
+```
+
+### Unexport pins opened by the module when finished
 ```js
 var gpio = require('../rpi-gpio');
 
@@ -90,10 +127,10 @@ This example shows how to set up a channel for output mode. After it is set up, 
 ```js
 var gpio = require('rpi-gpio');
 
-var pin   = 7,
-    delay = 2000,
-    count = 0,
-    max   = 3;
+var pin   = 7;
+var delay = 2000;
+var count = 0;
+var max   = 3;
 
 gpio.on('change', function(channel, value) {
     console.log('Channel ' + channel + ' value is now ' + value);
