@@ -262,7 +262,7 @@ function Gpio() {
         var Gpio = this;
         fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
             Gpio.read(channel, function(err, value) {
-                if (err) return cb(err);
+                // @todo how should error be handled here?
                 Gpio.emit('change', channel, value);
             });
         });
