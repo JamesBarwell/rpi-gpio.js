@@ -5,6 +5,7 @@ var async        = require('async');
 var debug        = require('debug')('rpi-gpio');
 
 var PATH = '/sys/class/gpio';
+var pollFrequency = 5007;
 var PINS = {
     v1: {
         '1':  null,
@@ -237,6 +238,10 @@ function Gpio() {
         getPinForCurrentMode = getPinRpi;
     };
 
+    this.setPollFrequency = function(freq) { //User can set a freguency in ms
+      if(typeof pollFrequency == 'number') pollFrequency = freq;
+    };
+
     // Init
     EventEmitter.call(this);
     this.reset();
@@ -277,7 +282,7 @@ function Gpio() {
     function createListener(channel, pin) {
         debug('listen for pin %d', pin);
         var Gpio = this;
-        fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
+        fs.watchFile(PATH + '/gpio' + pin + '/value',{ persistent: true, interval: pollFrequency }, function() {
             Gpio.read(channel, function(err, value) {
                 // @todo how should error be handled here?
                 Gpio.emit('change', channel, value);
