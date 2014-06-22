@@ -220,7 +220,7 @@ function Gpio() {
         exportedPins = {};
         getPinForCurrentMode = getPinRpi;
     };
-    
+
     this.setPollFrequency = function(freq) { //User can set a freguency in ms
       if(typeof pollFrequency == 'number') pollFrequency = freq;
     };
@@ -265,12 +265,12 @@ function getPinBcm(currentPins, channel) {
 function createListener(channel, pin) {
     debug('listen for pin %d', pin);
     var self = this;
-    fs.watchFile(PATH + '/gpio' + pin + '/value',{ persistent: true, interval: pollFrequency }, function() {
+    fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
         self.read(channel, function(err, value) {
             if (err) return cb(err);
             self.emit('change', channel, value);
         });
-    });
+    }, { interval: pollFrequency });
 }
 
 function setDirection(pin, direction, cb) {
