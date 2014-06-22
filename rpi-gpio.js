@@ -6,6 +6,8 @@ var debug        = require('debug')('rpi-gpio');
 
 var PATH = '/sys/class/gpio';
 
+var pollFrequency = 5007;
+
 var pins = {
     v1: {
         '1':  null,
@@ -218,7 +220,10 @@ function Gpio() {
         exportedPins = {};
         getPinForCurrentMode = getPinRpi;
     };
-
+    
+    this.setPollFrequency = function(freq) { //User can set a freguency in ms
+      if(typeof pollFrequency == 'number') pollFrequency = freq;
+    };
     // Init
     EventEmitter.call(this);
     this.reset();
@@ -260,7 +265,7 @@ function getPinBcm(currentPins, channel) {
 function createListener(channel, pin) {
     debug('listen for pin %d', pin);
     var self = this;
-    fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
+    fs.watchFile(PATH + '/gpio' + pin + '/value',{ persistent: true, interval: pollFrequency }, function() {
         self.read(channel, function(err, value) {
             if (err) return cb(err);
             self.emit('change', channel, value);
