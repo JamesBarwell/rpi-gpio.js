@@ -6,6 +6,8 @@ var debug        = require('debug')('rpi-gpio');
 
 var PATH = '/sys/class/gpio';
 
+var pollFrequency = 5007;
+
 var pins = {
     v1: {
         '1':  null,
@@ -219,6 +221,9 @@ function Gpio() {
         getPinForCurrentMode = getPinRpi;
     };
 
+    this.setPollFrequency = function(freq) { //User can set a freguency in ms
+      if(typeof pollFrequency == 'number') pollFrequency = freq;
+    };
     // Init
     EventEmitter.call(this);
     this.reset();
@@ -265,7 +270,7 @@ function createListener(channel, pin) {
             if (err) return cb(err);
             self.emit('change', channel, value);
         });
-    });
+    }, { interval: pollFrequency });
 }
 
 function setDirection(pin, direction, cb) {
