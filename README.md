@@ -46,6 +46,10 @@ Writes the value of a channel.
 Sets the channel addressing schema.
 * mode: Specify either Raspberry Pi or SoC/BCM pin schemas, by passing MODE_RPI or MODE_BCM. Defaults to MODE_RPI.
 
+### setPollFrequency(value)
+Sets the poll frequency for checking whether pin values have changed.
+* value: The polling frequency in milliseconds, defaults to 5007.
+
 ### input()
 Alias of read().
 
