@@ -66,7 +66,8 @@ var PINS = {
 
 function Gpio() {
     var currentPins;
-    var exportedPins = {};
+    var exportedInputPins  = {};
+    var exportedOutputPins = {};
     var getPinForCurrentMode = getPinRpi;
 
     this.DIR_IN   = 'in';
@@ -145,9 +146,15 @@ function Gpio() {
                 exportPin(pinForSetup, next);
             },
             function(next) {
-                exportedPins[pinForSetup] = true;
                 this.emit('export', channel);
                 createListener.call(this, channel, pinForSetup);
+
+                if (direction === this.DIR_IN) {
+                    exportedInputPins[pinForSetup] = true;
+                } else {
+                    exportedOutputPins[pinForSetup] = true;
+                }
+
                 setDirection(pinForSetup, direction, next);
             }.bind(this)
         ], cb);
@@ -163,9 +170,16 @@ function Gpio() {
     this.write = this.output = function(channel, value, cb /*err*/ ) {
         var pin = getPinForCurrentMode(channel);
 
-        if (!exportedPins[pin]) {
+        if (!exportedOutputPins[pin]) {
+            var message;
+            if (exportedInputPins[pin]) {
+                message = 'Pin has been exported for input so cannot be written to';
+            } else {
+                message = 'Pin has not been exported';
+            }
+
             return process.nextTick(function() {
-                cb(new Error('Pin has not been exported'));
+                cb(new Error(message));
             });
         }
 
@@ -182,7 +196,7 @@ function Gpio() {
     this.read = this.input = function(channel, cb /*err,value*/) {
         var pin = getPinForCurrentMode(channel);
 
-        if (!exportedPins[pin]) {
+        if (!exportedInputPins[pin]) {
             return process.nextTick(function() {
                 cb(new Error('Pin has not been exported'));
             });
@@ -200,11 +214,14 @@ function Gpio() {
      * @param {function} cb Optional callback
      */
     this.destroy = function(cb) {
-        var tasks = Object.keys(exportedPins).map(function(pin) {
-            return function(done) {
-                unexportPin(pin, done);
-            }
-        });
+        var tasks = Object.keys(exportedOutputPins)
+            .concat(Object.keys(exportedInputPins))
+            .map(function(pin) {
+                return function(done) {
+                    unexportPin(pin, done);
+                }
+            });
+
         async.parallel(tasks, cb);
     };
 
@@ -212,11 +229,11 @@ function Gpio() {
      * Reset the state of the module
      */
     this.reset = function() {
-        exportedPins = {};
+        exportedOutputPins = {};
+        exportedInputPins  = {};
         this.removeAllListeners();
 
         currentPins = undefined;
-        exportedPins = {};
         getPinForCurrentMode = getPinRpi;
     };
 

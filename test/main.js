@@ -324,11 +324,36 @@ describe('rpi-gpio', function() {
             });
         });
 
+        context('when pin 1 has been setup for input', function() {
+            var onSetup;
+            var onWrite;
+
+            beforeEach(function(done) {
+                onSetup = sinon.spy(done);
+                gpio.setup(1, gpio.DIR_IN, onSetup);
+            });
+
+            context('and pin 1 is written to with boolean true', function() {
+                beforeEach(function(done) {
+                    var callback = function() {
+                        done();
+                    }
+                    onWrite = sinon.spy(callback);
+                    gpio.write(1, true, onWrite);
+                });
+
+                it('should run the callback with an error', function() {
+                    sinon.assert.calledOnce(onWrite);
+                    assert.ok(onWrite.getCall(0).args[0]);
+                });
+            });
+        });
+
     });
 
     describe('read()', function() {
 
-        context('when pin 1 is setup', function() {
+        context('when pin 1 is setup for input', function() {
             beforeEach(function(done) {
                 gpio.setup(1, gpio.DIR_IN, done);
             });
