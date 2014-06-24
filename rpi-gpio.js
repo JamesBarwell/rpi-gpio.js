@@ -265,12 +265,12 @@ function getPinBcm(currentPins, channel) {
 function createListener(channel, pin) {
     debug('listen for pin %d', pin);
     var self = this;
-    fs.watchFile(PATH + '/gpio' + pin + '/value', function() {
+    fs.watchFile(PATH + '/gpio' + pin + '/value', { interval: pollFrequency }, function() {
         self.read(channel, function(err, value) {
             if (err) return cb(err);
             self.emit('change', channel, value);
         });
-    }, { interval: pollFrequency });
+    });
 }
 
 function setDirection(pin, direction, cb) {
