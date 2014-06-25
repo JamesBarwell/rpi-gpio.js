@@ -293,11 +293,13 @@ function Gpio() {
         fs.watchFile(
             PATH + '/gpio' + pin + '/value',
             { persistent: true, interval: pollFrequency },
-            function() {
-                Gpio.read(channel, function(err, value) {
-                    // @todo how should error be handled here?
-                    Gpio.emit('change', channel, value);
-                });
+            function(current, previous) {
+                if (current.mtime > previous.mtime) {
+                    Gpio.read(channel, function(err, value) {
+                        // @todo how should error be handled here?
+                        Gpio.emit('change', channel, value);
+                    });
+                }
             }
         );
     };

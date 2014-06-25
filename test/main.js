@@ -16,7 +16,7 @@ describe('rpi-gpio', function() {
     before(function() {
         sinon.stub(fs, 'writeFile').yieldsAsync();
         sinon.stub(fs, 'exists').yieldsAsync(false);
-        sinon.stub(fs, 'watchFile').yieldsAsync();
+        sinon.stub(fs, 'watchFile').yieldsAsync({ mtime: 2000 }, { mtime: 1000 });
         sinon.stub(fs, 'readFile')
             .withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo());
         sinon.spy(fs, 'unwatchFile');
@@ -487,28 +487,41 @@ describe('rpi-gpio', function() {
     });
 
     describe('pin value change', function() {
-        var listener;
 
-        beforeEach(function(done) {
-            // @todo Must be sync yields, else the beforeEach completes
-            // before the read finishes. Make this neater.
-            fs.readFile.yields(null, '1');
+        context('when a pin is set up', function() {
+            var listener;
 
-            listener = sinon.spy();
-            gpio.on('change', listener);
+            beforeEach(function(done) {
+                // Remove previous stub so that we can control when watchFile triggers
+                fs.watchFile.restore();
+                sinon.stub(fs, 'watchFile');
 
-            gpio.setup(1, gpio.DIR_IN, onSetupComplete);
+                listener = sinon.spy();
+                gpio.on('change', listener);
 
-            function onSetupComplete() {
-                var cb = fs.watchFile.getCall(0).args[2];
-                cb();
-                done();
-            }
+                gpio.setup(1, gpio.DIR_IN, done);
+            });
+
+            context('and its voltage changes from low to high', function() {
+                beforeEach(function(done) {
+                    fs.readFile.yieldsAsync(null, '1');
+
+                    gpio.on('change', function() {
+                        done();
+                    });
+
+                    // Trigger voltage change
+                    var cb = fs.watchFile.lastCall.args[2];
+                    cb({ mtime: 2000 }, { mtime: 1000 });
+                });
+
+                it('should emit a change event', function() {
+                    sinon.assert.calledWith(listener, 1, true);
+                });
+
+            });
         });
 
-        it('should emit a change event', function() {
-            sinon.assert.calledWith(listener, 1, true);
-        });
     });
 
     describe('handles pin translation', function() {
