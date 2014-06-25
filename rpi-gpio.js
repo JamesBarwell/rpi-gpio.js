@@ -296,7 +296,10 @@ function Gpio() {
             function(current, previous) {
                 if (current.mtime > previous.mtime) {
                     Gpio.read(channel, function(err, value) {
-                        // @todo how should error be handled here?
+                        debug(
+                            'failed to read value after a change on channel %d',
+                            channel
+                        );
                         Gpio.emit('change', channel, value);
                     });
                 }
