@@ -25,42 +25,60 @@ Please note that there are two different and confusing ways to reference a chann
 
 ## API
 
-### setup(channel [, direction], callback)
+### Methods
+
+#### setup(channel [, direction], callback)
 Sets up a channel for read or write. Must be done before the channel can be used.
 * channel: Reference to the pin in the current mode's schema.
 * direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. Defaults to DIR_OUT.
 * callback: Provides Error as the first argument if an error occured.
 
-### read(channel, callback)
+#### read(channel, callback)
 Reads the value of a channel.
 * channel: Reference to the pin in the current mode's schema.
 * callback: Provides Error as the first argument if an error occured, otherwise the pin value boolean as the second argument.
 
-### write(channel, value [, callback])
+#### write(channel, value [, callback])
 Writes the value of a channel.
 * channel: Reference to the pin in the current mode's schema.
 * value: Boolean value to specify whether the channel will turn on or off.
 * callback: Provides Error as the first argument if an error occured.
 
-### setMode(mode)
+#### setMode(mode)
 Sets the channel addressing schema.
 * mode: Specify either Raspberry Pi or SoC/BCM pin schemas, by passing MODE_RPI or MODE_BCM. Defaults to MODE_RPI.
 
-### setPollFrequency(value)
+#### setPollFrequency(value)
 Sets the poll frequency for checking whether pin values have changed.
 * value: The polling frequency in milliseconds, defaults to 5007.
 
-### input()
+#### input()
 Alias of read().
 
-### output()
+#### output()
 Alias of write().
 
-### destroy()
+#### destroy()
 Tears down any previously set up channels.
 
-### reset()
+#### reset()
 Tears down the module state - used for testing.
+
+### Events
+See Node [EventEmitter](http://nodejs.org/api/events.html) for documentation on listening to events.
+
+#### modeChange
+Emitted when the pin addressing schema is changed
+* mode
+
+#### export
+Emitted when a channel is exported
+* channel
+
+#### change
+Emitted when the value of a channel changed
+* channel
+* value
 
 ## Examples
 
