@@ -109,28 +109,27 @@ function Gpio() {
      *
      * @param {number}   channel   Reference to the pin in the current mode's schema
      * @param {string}   direction The pin direction, either 'in' or 'out'
-     * @param {function} cb        Optional callback
+     * @param {function} onSetup   Optional callback
      */
-    this.setup = function(channel, direction, cb /*err*/) {
+    this.setup = function(channel, direction, onSetup /*err*/) {
+        if (arguments.length === 2) {
+            onSetup = direction;
+            direction = this.DIR_OUT;
+        }
+        direction = direction || this.DIR_OUT;
+        onSetup = onSetup || function() {};
+
         if (!channel) {
             return process.nextTick(function() {
-                cb(new Error('Channel not specified'));
+                onSetup(new Error('Channel must be a number'));
             });
-        }
-
-        direction = direction || this.DIR_OUT;
-
-        if (typeof direction === 'function') {
-            cb = direction;
-            direction = this.DIR_OUT;
         }
 
         if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
             return process.nextTick(function() {
-                cb(new Error('Cannot set invalid direction'));
+                onSetup(new Error('Cannot set invalid direction'));
             });
         }
-
 
         var pinForSetup;
         async.waterfall([
@@ -169,7 +168,7 @@ function Gpio() {
 
                 setDirection(pinForSetup, direction, next);
             }.bind(this)
-        ], cb);
+        ], onSetup);
     };
 
     /**
