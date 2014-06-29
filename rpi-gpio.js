@@ -133,15 +133,7 @@ function Gpio() {
 
         var pinForSetup;
         async.waterfall([
-            function(next) {
-                setRaspberryVersion(function(err, pinSchema) {
-                    if (err) next(err);
-                    if (pinSchema) {
-                        currentPins = pinSchema;
-                    }
-                    next();
-                });
-            },
+            setRaspberryVersion,
             function(next) {
                 pinForSetup = getPinForCurrentMode(channel);
                 debug('set up pin %d', pinForSetup);
@@ -274,7 +266,9 @@ function Gpio() {
                 pinVersion
             );
 
-            return cb(null, PINS[pinVersion]);
+            currentPins = PINS[pinVersion];
+
+            return cb(null);
         });
     };
 
