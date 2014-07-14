@@ -90,7 +90,7 @@ describe('rpi-gpio', function() {
 
             context('and a channel is set up', function() {
                 beforeEach(function(done) {
-                    gpio.setup(1, null, done);
+                    gpio.setup(7, null, done);
                 });
 
                 it('should set up a file watcher with the specified poll frequency', function() {
@@ -129,7 +129,7 @@ describe('rpi-gpio', function() {
                     done();
                 }
 
-                gpio.setup(1, 'foo', callback);
+                gpio.setup(7, 'foo', callback);
             });
 
             it('should run the callback with an error', function() {
@@ -142,20 +142,20 @@ describe('rpi-gpio', function() {
             beforeEach(function(done) {
                 fs.exists.yieldsAsync(true);
 
-                gpio.setup(1, null, done);
+                gpio.setup(7, null, done);
             });
 
             it('should first unexport the channel', function() {
                 var args0 = fs.writeFile.getCall(0).args;
                 assert.equal(args0[0], PATH + '/unexport');
-                assert.equal(args0[1], '1');
+                assert.equal(args0[1], '7');
             });
 
 
             it('should second export the channel', function() {
                 var args1 = fs.writeFile.getCall(1).args;
                 assert.equal(args1[0], PATH + '/export');
-                assert.equal(args1[1], '1');
+                assert.equal(args1[1], '7');
             });
         });
 
@@ -173,7 +173,7 @@ describe('rpi-gpio', function() {
                     gpio.on('export', listener);
 
                     onSetup = sinon.spy(done);
-                    gpio.setup(1, null, onSetup);
+                    gpio.setup(7, null, onSetup);
                 });
 
                 it('should export the channel', function() {
@@ -181,7 +181,7 @@ describe('rpi-gpio', function() {
 
                     var args0 = fs.writeFile.getCall(0).args;
                     assert.equal(args0[0], PATH + '/export');
-                    assert.equal(args0[1], '1');
+                    assert.equal(args0[1], '7');
                 });
 
                 it('should run the setup callback', function() {
@@ -190,41 +190,41 @@ describe('rpi-gpio', function() {
 
                 it('should emit an export event', function() {
                     // The emitted channel is the same format as given
-                    sinon.assert.calledWith(listener, 1);
+                    sinon.assert.calledWith(listener, 7);
                 });
 
                 it('should set the channel direction to out by default', function() {
                     var args1 = fs.writeFile.getCall(1).args;
-                    assert.equal(args1[0], PATH + '/gpio1/direction');
+                    assert.equal(args1[0], PATH + '/gpio7/direction');
                     assert.equal(args1[1], 'out');
                 });
 
                 it('should set up a file watcher for the value', function() {
                     var args = fs.watchFile.lastCall.args;
-                    assert.equal(args[0], PATH + '/gpio1/value');
+                    assert.equal(args[0], PATH + '/gpio7/value');
                 });
             });
 
             context('and direction is specified inwards', function() {
                 beforeEach(function(done) {
-                    gpio.setup(1, gpio.DIR_IN, done);
+                    gpio.setup(7, gpio.DIR_IN, done);
                 });
 
                 it('should set the channel direction', function() {
                     var args = fs.writeFile.lastCall.args;
-                    assert.equal(args[0], PATH + '/gpio1/direction');
+                    assert.equal(args[0], PATH + '/gpio7/direction');
                     assert.equal(args[1], 'in');
                 });
             });
 
             context('and direction is specified outwards', function() {
                 beforeEach(function(done) {
-                    gpio.setup(1, gpio.DIR_OUT, done);
+                    gpio.setup(7, gpio.DIR_OUT, done);
                 });
 
                 it('should set the channel direction', function() {
                     var args = fs.writeFile.lastCall.args;
-                    assert.equal(args[0], PATH + '/gpio1/direction');
+                    assert.equal(args[0], PATH + '/gpio7/direction');
                     assert.equal(args[1], 'out');
                 });
             });
@@ -234,7 +234,7 @@ describe('rpi-gpio', function() {
 
                 beforeEach(function(done) {
                     callback = sinon.spy(done);
-                    gpio.setup(1, callback);
+                    gpio.setup(7, callback);
                 });
 
                 it('should execute the callback when direction is missing', function() {
@@ -247,22 +247,22 @@ describe('rpi-gpio', function() {
     });
 
     describe('write()', function() {
-        context('when pin 1 has been setup for output', function() {
+        context('when pin 7 has been setup for output', function() {
             var onSetup;
 
             beforeEach(function(done) {
                 onSetup = sinon.spy(done);
-                gpio.setup(1, gpio.DIR_OUT, onSetup);
+                gpio.setup(7, gpio.DIR_OUT, onSetup);
             });
 
-            context('and pin 1 is written to with boolean true', function() {
+            context('and pin 7 is written to with boolean true', function() {
                 beforeEach(function(done) {
-                    gpio.write(1, true, done);
+                    gpio.write(7, true, done);
                 });
 
                 it('should write the value to the file system', function() {
                     var args = fs.writeFile.lastCall.args;
-                    assert.equal(args[0], PATH + '/gpio1/value');
+                    assert.equal(args[0], PATH + '/gpio7/value');
                     assert.equal(args[1], '1');
 
                     sinon.assert.called(onSetup);
@@ -271,7 +271,7 @@ describe('rpi-gpio', function() {
 
             context('when given number 1', function() {
                 beforeEach(function() {
-                    gpio.write(1, 1);
+                    gpio.write(7, 1);
                 });
 
                 it('should normalise to string "1"', function() {
@@ -282,7 +282,7 @@ describe('rpi-gpio', function() {
 
             context('when given string "1"', function() {
                 beforeEach(function() {
-                    gpio.write(1, 1);
+                    gpio.write(7, 1);
                 });
 
                 it('should normalise to string "1"', function() {
@@ -293,7 +293,7 @@ describe('rpi-gpio', function() {
 
             context('when given boolean false', function() {
                 beforeEach(function() {
-                    gpio.write(1, false);
+                    gpio.write(7, false);
                 });
 
                 it('should normalise to string "0"', function() {
@@ -304,7 +304,7 @@ describe('rpi-gpio', function() {
 
             context('when given number 0', function() {
                 beforeEach(function() {
-                    gpio.write(1, 0);
+                    gpio.write(7, 0);
                 });
 
                 it('should normalise to string "0"', function() {
@@ -315,7 +315,7 @@ describe('rpi-gpio', function() {
 
             context('when given string "0"', function() {
                 beforeEach(function() {
-                    gpio.write(1, '0');
+                    gpio.write(7, '0');
                 });
 
                 it('should normalise to string "0"', function() {
@@ -324,7 +324,7 @@ describe('rpi-gpio', function() {
                 });
             });
 
-            context('and pin 2 is written to', function() {
+            context('and pin 3 is written to', function() {
                 var onWrite;
 
                 beforeEach(function(done) {
@@ -332,7 +332,7 @@ describe('rpi-gpio', function() {
                         done();
                     }
                     onWrite = sinon.spy(write);
-                    gpio.write(2, true, onWrite);
+                    gpio.write(3, true, onWrite);
                 });
 
                 it('should run the callback with an error', function() {
@@ -342,22 +342,22 @@ describe('rpi-gpio', function() {
             });
         });
 
-        context('when pin 1 has been setup for input', function() {
+        context('when pin 7 has been setup for input', function() {
             var onSetup;
             var onWrite;
 
             beforeEach(function(done) {
                 onSetup = sinon.spy(done);
-                gpio.setup(1, gpio.DIR_IN, onSetup);
+                gpio.setup(7, gpio.DIR_IN, onSetup);
             });
 
-            context('and pin 1 is written to with boolean true', function() {
+            context('and pin 7 is written to with boolean true', function() {
                 beforeEach(function(done) {
                     var callback = function() {
                         done();
                     }
                     onWrite = sinon.spy(callback);
-                    gpio.write(1, true, onWrite);
+                    gpio.write(7, true, onWrite);
                 });
 
                 it('should run the callback with an error', function() {
@@ -371,56 +371,56 @@ describe('rpi-gpio', function() {
 
     describe('read()', function() {
 
-        context('when pin 1 is setup for input', function() {
+        context('when pin 7 is setup for input', function() {
             beforeEach(function(done) {
-                gpio.setup(1, gpio.DIR_IN, done);
+                gpio.setup(7, gpio.DIR_IN, done);
             });
 
-            context('and pin 1 is on', function() {
+            context('and pin 7 is on', function() {
                 beforeEach(function() {
                     fs.readFile.yieldsAsync(null, '1');
                 });
 
-                context('and pin 1 is read', function() {
+                context('and pin 7 is read', function() {
                     var callback;
 
                     beforeEach(function(done) {
                         callback = sinon.spy(done);
-                        gpio.read(1, callback);
+                        gpio.read(7, callback);
                     });
 
                     it('should run the callback with a value boolean true', function() {
                         var args = fs.readFile.lastCall.args;
-                        assert.equal(args[0], PATH + '/gpio1/value');
+                        assert.equal(args[0], PATH + '/gpio7/value');
                         sinon.assert.calledWith(callback, null, true);
                     });
 
                 });
             });
 
-            context('and pin 1 is off', function() {
+            context('and pin 7 is off', function() {
                 beforeEach(function() {
                     fs.readFile.yieldsAsync(null, '0');
                 });
 
-                context('and pin 1 is read', function() {
+                context('and pin 7 is read', function() {
                     var callback;
 
                     beforeEach(function(done) {
                         callback = sinon.spy(done);
-                        gpio.read(1, callback);
+                        gpio.read(7, callback);
                     });
 
                     it('should run the callback with a value boolean false', function() {
                         var args = fs.readFile.lastCall.args;
-                        assert.equal(args[0], PATH + '/gpio1/value');
+                        assert.equal(args[0], PATH + '/gpio7/value');
                         sinon.assert.calledWith(callback, null, false);
                     });
 
                 });
             });
 
-            context('and pin 2 is read', function() {
+            context('and pin 3 is read', function() {
                 var callback;
 
                 beforeEach(function(done) {
@@ -428,7 +428,7 @@ describe('rpi-gpio', function() {
                         done();
                     }
                     callback = sinon.spy(onRead);
-                    gpio.read(2, callback);
+                    gpio.read(3, callback);
                 });
 
                 it('should run the callback with an error', function() {
@@ -440,12 +440,12 @@ describe('rpi-gpio', function() {
     });
 
     describe('destroy', function() {
-        context('when pins 1, 2, 3 have been exported', function() {
+        context('when pins 7, 8 and 10 have been exported', function() {
             var unexportPath = PATH + '/unexport';
 
             beforeEach(function(done) {
                 var i = 3;
-                [1, 2, 3].forEach(function(pin) {
+                [7, 8, 10].forEach(function(pin) {
                     gpio.setup(pin, gpio.DIR_IN, function() {
                         if (--i === 0) {
                             onSetupComplete();
@@ -459,28 +459,28 @@ describe('rpi-gpio', function() {
                 }
             });
 
-            it('should unexport pin 1', function() {
-                sinon.assert.calledWith(fs.writeFile, unexportPath, '1');
+            it('should unexport pin 7', function() {
+                sinon.assert.calledWith(fs.writeFile, unexportPath, '7');
             });
 
-            it('should unexport pin 2', function() {
-                sinon.assert.calledWith(fs.writeFile, unexportPath, '2');
+            it('should unexport pin 8', function() {
+                sinon.assert.calledWith(fs.writeFile, unexportPath, '8');
             });
 
-            it('should unexport pin 3', function() {
-                sinon.assert.calledWith(fs.writeFile, unexportPath, '3');
+            it('should unexport pin 10', function() {
+                sinon.assert.calledWith(fs.writeFile, unexportPath, '10');
             });
 
-            it('should unwatch pin 1', function() {
-                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio1/value');
+            it('should unwatch pin 7', function() {
+                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio7/value');
             });
 
-            it('should unwatch pin 2', function() {
-                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio2/value');
+            it('should unwatch pin 8', function() {
+                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio8/value');
             });
 
-            it('should unwatch pin 3', function() {
-                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio3/value');
+            it('should unwatch pin 10', function() {
+                sinon.assert.calledWith(fs.unwatchFile, PATH + '/gpio10/value');
             });
 
         });
@@ -499,7 +499,7 @@ describe('rpi-gpio', function() {
                 listener = sinon.spy();
                 gpio.on('change', listener);
 
-                gpio.setup(1, gpio.DIR_IN, done);
+                gpio.setup(7, gpio.DIR_IN, done);
             });
 
             context('and its voltage changes from low to high', function() {
@@ -516,7 +516,7 @@ describe('rpi-gpio', function() {
                 });
 
                 it('should emit a change event', function() {
-                    sinon.assert.calledWith(listener, 1, true);
+                    sinon.assert.calledWith(listener, 7, true);
                 });
 
             });
