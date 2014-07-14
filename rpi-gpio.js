@@ -7,59 +7,59 @@ var debug        = require('debug')('rpi-gpio');
 var PATH = '/sys/class/gpio';
 var PINS = {
     v1: {
-        '1':  null,
-        '2':  null,
+        // 1: 3.3v
+        // 2: 5v
         '3':  0,
-        '4':  null,
+        // 4: 5v
         '5':  1,
-        '6':  null,
+        // 6: ground
         '7':  4,
         '8':  14,
-        '9':  null,
+        // 9: ground
         '10': 15,
         '11': 17,
         '12': 18,
         '13': 21,
-        '14': null,
+        // 14: ground
         '15': 22,
         '16': 23,
-        '17': null,
+        // 17: 3.3v
         '18': 24,
         '19': 10,
-        '20': null,
+        // 20: ground
         '21': 9,
         '22': 25,
         '23': 11,
         '24': 8,
-        '25': null,
+        // 25: ground
         '26': 7
     },
     v2: {
-        '1':  null,
-        '2':  null,
+        // 1: 3.3v
+        // 2: 5v
         '3':  2,
-        '4':  null,
+        // 4: 5v
         '5':  3,
-        '6':  null,
+        // 6: ground
         '7':  4,
         '8':  14,
-        '9':  null,
+        // 9: ground
         '10': 15,
         '11': 17,
         '12': 18,
         '13': 27,
-        '14': null,
+        // 14: ground
         '15': 22,
         '16': 23,
-        '17': null,
+        // 17: 3.3v
         '18': 24,
         '19': 10,
-        '20': null,
+        // 20: ground
         '21': 9,
         '22': 25,
         '23': 11,
         '24': 8,
-        '25': null,
+        // 25: ground
         '26': 7
     }
 };
@@ -136,6 +136,9 @@ function Gpio() {
             setRaspberryVersion,
             function(next) {
                 pinForSetup = getPinForCurrentMode(channel);
+                if (!pinForSetup) {
+                    return next(new Error('Channel ' + channel + ' does not map to a GPIO pin'));
+                }
                 debug('set up pin %d', pinForSetup);
                 isExported(pinForSetup, next);
             },
@@ -277,7 +280,26 @@ function Gpio() {
     };
 
     function getPinBcm(channel) {
-        return channel + '';
+        channel = parseInt(channel, 10);
+        return [
+            3,
+            5,
+            7,
+            8,
+            10,
+            11,
+            12,
+            13,
+            15,
+            16,
+            18,
+            19,
+            21,
+            22,
+            23,
+            24,
+            26
+        ].indexOf(channel) !== -1 ? (channel + '') : null;
     };
 
     function createListener(channel, pin) {
