@@ -540,6 +540,23 @@ describe('rpi-gpio', function() {
             });
         });
 
+        context('when a pin is set up with no callback', function() {
+            var listener;
+
+            beforeEach(function() {
+                // Remove previous stub so that we can control when watchFile triggers
+                fs.watchFile.restore();
+                sinon.stub(fs, 'watchFile');
+
+                gpio.setup(7, gpio.DIR_IN);
+            });
+
+            it('should not error', function() {
+                assert.ok(true);
+            });
+
+        });
+
     });
 
     describe('handles pin translation', function() {

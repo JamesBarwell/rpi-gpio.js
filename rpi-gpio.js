@@ -128,10 +128,11 @@ function Gpio() {
      * @param {function} onSetup   Optional callback
      */
     this.setup = function(channel, direction, onSetup /*err*/) {
-        if (arguments.length === 2) {
+        if (arguments.length === 2 && typeof direction == 'function') {
             onSetup = direction;
             direction = this.DIR_OUT;
         }
+
         direction = direction || this.DIR_OUT;
         onSetup = onSetup || function() {};
 
