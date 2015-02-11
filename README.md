@@ -1,7 +1,7 @@
 rpi-gpio.js
 ==========
 
-Control Raspberry Pi GPIO pins with node.js
+Control Raspberry Pi GPIO pins with io.js / node.js
 
 [![Build Status](https://travis-ci.org/JamesBarwell/rpi-gpio.js.svg?branch=master)](https://travis-ci.org/JamesBarwell/rpi-gpio.js)
 [![NPM version](https://badge.fury.io/js/rpi-gpio.svg)](http://badge.fury.io/js/rpi-gpio)
