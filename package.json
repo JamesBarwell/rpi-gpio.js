@@ -12,9 +12,10 @@
     "test": "test"
   },
   "devDependencies": {
+    "epoll": "^0.1.12",
+    "istanbul": "~0.2.7",
     "mocha": "~1.18.2",
-    "sinon": "~1.9.0",
-    "istanbul": "~0.2.7"
+    "sinon": "~1.9.0"
   },
   "scripts": {
     "test": "mocha",
