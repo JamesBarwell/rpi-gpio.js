@@ -6,7 +6,7 @@ var fs = require('fs'),
 	exec = require("child_process").exec,
 	debug = require('debug')('rpi-gpio');
 
-var PATH = '/sys/devices/virtual';
+var PATH = '/sys/class/gpio';
 var PINS = {
 	v1: {
 		// 1: 3.3v
@@ -82,24 +82,24 @@ var PINS = {
 	}
 };
 
-function setDirection(pin, direction, cb) {
-	debug('set direction %s on pin %d', direction.toUpperCase(), pin);
-	fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function (err) {
-		if(cb) {
-			return cb(err);
-		}
-	});
-}
-
-function exportPin(pin, cb) {
+function exportPin(pin, cb, direction) {
 	debug('export pin %d', pin);
-	exec("gpio-admin export " + pin, cb);
+	var exportCommand = "gpio export " + pin + " " + direction;
+
+	exec(exportCommand, {}, function () {
+        cb();
+    });
 }
 
 function unexportPin(pin, cb) {
 	debug('unexport pin %d', pin);
+
+	var unexportCommand = "gpio unexport " + pin;
+
 	fs.unwatchFile(PATH + '/gpio' + pin + '/value');
-	exec("gpio-admin unexport " + pin, cb);
+	exec(unexportCommand, {}, function () {
+		cb();
+	});
 }
 
 function isExported(pin, cb) {
@@ -187,7 +187,7 @@ function Gpio() {
 	}
 
 	function createListener(channel, pin) {
-		var channelPath = PATH + '/gpio' + pin;// + '/value';
+		var channelPath = PATH + '/gpio' + pin + '/value';
 
 		debug('listen for pin %d at ' + channelPath, pin);
 
@@ -199,7 +199,7 @@ function Gpio() {
 		    },
 		    function (current, previous) {
 		        console.log('Event created at ' + channelPath);
-		        if((current && previous) && current.mtime > previous.mtime) {
+		        //if((current && previous) && current.mtime > previous.mtime) {
 		            self.read(channel, function (err, value) {
 		                debug(
 		                    'failed to read value after a change on channel %d:' + err,
@@ -207,7 +207,7 @@ function Gpio() {
 		                );
 		                self.emit('change', channel, value);
 		            });
-		        }
+		        //}
 		    }
 		);
 	}
@@ -288,7 +288,7 @@ function Gpio() {
 				return next(null);
 			},
 			function (next) {
-				exportPin(pinForSetup, next);
+				exportPin(pinForSetup, next, direction);
 			},
 			function (next) {
 				self.emit('export', channel);
@@ -300,7 +300,7 @@ function Gpio() {
 					exportedOutputPins[pinForSetup] = true;
 				}
 
-				setDirection(pinForSetup, direction, next);
+				return next(null);
 			}.bind(self)
 		], onSetup);
 	};
