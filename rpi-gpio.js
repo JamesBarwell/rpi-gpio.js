@@ -319,8 +319,9 @@ function Gpio() {
 			function (next) {
 				self.emit('export', channel);
 
+				createListener.call(self, channel, pinForSetup);
+
 				if(direction === self.DIR_IN) {
-					createListener.call(self, channel, pinForSetup);
 					exportedInputPins[pinForSetup] = true;
 				} else {
 					exportedOutputPins[pinForSetup] = true;
