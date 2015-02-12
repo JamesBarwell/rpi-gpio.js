@@ -14,6 +14,8 @@ This module can then be installed with npm:
 npm install rpi-gpio
 ```
 
+You'll also need to install the [GPIO Utility from WiringPi](http://wiringpi.com/download-and-install/).
+
 ## Usage
 Firstly, make make sure you are running your application as root or with sudo, else the Raspberry Pi will not let you output to the GPIO.
 
