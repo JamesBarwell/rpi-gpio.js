@@ -50,6 +50,10 @@ Writes the value of a channel.
 Sets the channel addressing schema.
 * mode: Specify either Raspberry Pi or SoC/BCM pin schemas, by passing MODE_RPI or MODE_BCM. Defaults to MODE_RPI.
 
+#### setExportUtility(exportUtility)
+Set Export Utility.
+* exportUtility: Specify the export utility used to export GPIO pins by passing `EXPORT_WIRING_PI_GPIO` or `EXPORT_GPIO_ADMIN`. Defaults to `EXPORT_WIRING_PI_GPIO`.
+
 #### setPollFrequency(value)
 Sets the poll frequency for checking whether pin values have changed.
 * value: The polling frequency in milliseconds, defaults to 5007.
