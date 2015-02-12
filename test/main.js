@@ -82,25 +82,6 @@ describe('rpi-gpio', function() {
         });
     });
 
-    describe('setPollFrequency()', function() {
-        context('when poll frequency is set to 1000', function() {
-            beforeEach(function() {
-                gpio.setPollFrequency(1000);
-            });
-
-            context('and a channel is set up', function() {
-                beforeEach(function(done) {
-                    gpio.setup(7, null, done);
-                });
-
-                it('should set up a file watcher with the specified poll frequency', function() {
-                    var args = fs.watchFile.lastCall.args;
-                    assert.deepEqual(args[1], { persistent: true, interval: 1000 });
-                });
-            });
-        });
-    });
-
     describe('setup()', function() {
         context('when given an invalid channel', function() {
             var callback;
