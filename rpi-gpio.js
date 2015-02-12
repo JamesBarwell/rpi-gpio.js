@@ -252,7 +252,7 @@ function Gpio() {
 	};
 
 	/**
-	 * Set Export Utility. Defaults to 'EXPORT_GPIO_ADMIN'.
+	 * Set Export Utility. Defaults to 'EXPORT_WIRING_PI_GPIO'.
 	 *
 	 * @param {string} exportUtility, 'EXPORT_GPIO_ADMIN' or 'EXPORT_WIRING_PI_GPIO'
 	 */
@@ -408,7 +408,7 @@ function Gpio() {
 
 		currentPins = undefined;
 		getPinForCurrentMode = getPinRpi;
-		currentExportUtility = self.EXPORT_GPIO_ADMIN;
+		currentExportUtility = self.EXPORT_WIRING_PI_GPIO;
 	};
 
 	// Init
