@@ -54,10 +54,6 @@ Sets the channel addressing schema.
 Set Export Utility.
 * exportUtility: Specify the export utility used to export GPIO pins by passing `EXPORT_WIRING_PI_GPIO` or `EXPORT_GPIO_ADMIN`. Defaults to `EXPORT_WIRING_PI_GPIO`.
 
-#### setPollFrequency(value)
-Sets the poll frequency for checking whether pin values have changed.
-* value: The polling frequency in milliseconds, defaults to 5007.
-
 #### input()
 Alias of read().
 
