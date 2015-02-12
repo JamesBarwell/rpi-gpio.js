@@ -12,9 +12,9 @@
     "test": "test"
   },
   "devDependencies": {
+    "istanbul": "~0.2.7",
     "mocha": "~1.18.2",
-    "sinon": "~1.9.0",
-    "istanbul": "~0.2.7"
+    "sinon": "~1.9.0"
   },
   "scripts": {
     "test": "mocha",
@@ -29,6 +29,7 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
+    "epoll": "^0.1.12",
     "async": "~0.8.0",
     "debug": "~0.8.1"
   }

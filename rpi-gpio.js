@@ -1,381 +1,421 @@
-var fs           = require('fs');
-var util         = require('util');
-var EventEmitter = require('events').EventEmitter;
-var async        = require('async');
-var debug        = require('debug')('rpi-gpio');
-
-var PATH = '/sys/class/gpio';
-var PINS = {
-    v1: {
-        // 1: 3.3v
-        // 2: 5v
-        '3':  0,
-        // 4: 5v
-        '5':  1,
-        // 6: ground
-        '7':  4,
-        '8':  14,
-        // 9: ground
-        '10': 15,
-        '11': 17,
-        '12': 18,
-        '13': 21,
-        // 14: ground
-        '15': 22,
-        '16': 23,
-        // 17: 3.3v
-        '18': 24,
-        '19': 10,
-        // 20: ground
-        '21': 9,
-        '22': 25,
-        '23': 11,
-        '24': 8,
-        // 25: ground
-        '26': 7
-    },
-    v2: {
-        // 1: 3.3v
-        // 2: 5v
-        '3':  2,
-        // 4: 5v
-        '5':  3,
-        // 6: ground
-        '7':  4,
-        '8':  14,
-        // 9: ground
-        '10': 15,
-        '11': 17,
-        '12': 18,
-        '13': 27,
-        // 14: ground
-        '15': 22,
-        '16': 23,
-        // 17: 3.3v
-        '18': 24,
-        '19': 10,
-        // 20: ground
-        '21': 9,
-        '22': 25,
-        '23': 11,
-        '24': 8,
-        // 25: ground
-        '26': 7,
-
-        // Model B+ pins
-        // 27: ID_SD
-        // 28: ID_SC
-        '29': 5,
-        // 30: ground
-        '31': 6,
-        '32': 12,
-        '33': 13,
-        // 34: ground
-        '35': 19,
-        '36': 16,
-        '37': 26,
-        '38': 20,
-        // 39: ground
-        '40': 21
-    }
-};
+/*jslint node: true, white: true */
+var fs = require('fs'),
+	util = require('util'),
+	EventEmitter = require('events').EventEmitter,
+	async = require('async'),
+	exec = require("child_process").exec,
+    Epoll = require('epoll').Epoll,
+	debug = require('debug')('rpi-gpio');
 
 function Gpio() {
-    var currentPins;
-    var exportedInputPins  = {};
-    var exportedOutputPins = {};
-    var getPinForCurrentMode = getPinRpi;
-    var pollFrequency = 5007;
+	var self = this,
+		PATH = '/sys/class/gpio',
+		PINS = {
+			v1: {
+				// 1: 3.3v
+				// 2: 5v
+				'3': 0,
+				// 4: 5v
+				'5': 1,
+				// 6: ground
+				'7': 4,
+				'8': 14,
+				// 9: ground
+				'10': 15,
+				'11': 17,
+				'12': 18,
+				'13': 21,
+				// 14: ground
+				'15': 22,
+				'16': 23,
+				// 17: 3.3v
+				'18': 24,
+				'19': 10,
+				// 20: ground
+				'21': 9,
+				'22': 25,
+				'23': 11,
+				'24': 8,
+				// 25: ground
+				'26': 7
+			},
+			v2: {
+				// 1: 3.3v
+				// 2: 5v
+				'3': 2,
+				// 4: 5v
+				'5': 3,
+				// 6: ground
+				'7': 4,
+				'8': 14,
+				// 9: ground
+				'10': 15,
+				'11': 17,
+				'12': 18,
+				'13': 27,
+				// 14: ground
+				'15': 22,
+				'16': 23,
+				// 17: 3.3v
+				'18': 24,
+				'19': 10,
+				// 20: ground
+				'21': 9,
+				'22': 25,
+				'23': 11,
+				'24': 8,
+				// 25: ground
+				'26': 7,
 
-    this.DIR_IN   = 'in';
-    this.DIR_OUT  = 'out';
-    this.MODE_RPI = 'mode_rpi';
-    this.MODE_BCM = 'mode_bcm';
+				// Model B+ pins
+				// 27: ID_SD
+				// 28: ID_SC
+				'29': 5,
+				// 30: ground
+				'31': 6,
+				'32': 12,
+				'33': 13,
+				// 34: ground
+				'35': 19,
+				'36': 16,
+				'37': 26,
+				'38': 20,
+				// 39: ground
+				'40': 21
+			}
+		},
+		currentPins,
+		currentExportUtility,
+		exportedInputPins = {},
+		exportedOutputPins = {},
+		getPinForCurrentMode,
+		pollers = {},
+		bcmChannels = [
+			3,
+			5,
+			7,
+			8,
+			10,
+			11,
+			12,
+			13,
+			15,
+			16,
+			18,
+			19,
+			21,
+			22,
+			23,
+			24,
+			26,
+			29,
+			31,
+			32,
+			33,
+			35,
+			36,
+			37,
+			38,
+			40
+		];
 
-    /**
-     * Set pin reference mode. Defaults to 'mode_rpi'.
-     *
-     * @param {string} mode Pin reference mode, 'mode_rpi' or 'mode_bcm'
-     */
-    this.setMode = function(mode) {
-        if (mode === this.MODE_RPI) {
-            getPinForCurrentMode = getPinRpi;
-        } else if (mode === this.MODE_BCM) {
-            getPinForCurrentMode = getPinBcm;
-        } else {
-            throw new Error('Cannot set invalid mode');
-        }
+	self.DIR_IN = 'in';
+	self.DIR_OUT = 'out';
+	self.MODE_RPI = 'mode_rpi';
+	self.MODE_BCM = 'mode_bcm';
+	self.EXPORT_GPIO_ADMIN = 'gpio-admin';
+	self.EXPORT_WIRING_PI_GPIO = 'gpio';
 
-        this.emit('modeChange', mode);
-    };
+	// Private functions
+	function exportPin(pin, cb, direction) {
+		debug('export pin %d', pin);
+		var exportCommand = currentExportUtility + ' export ' + pin,
+			edgeCommand = currentExportUtility + ' edge ' + pin + ' both';
 
-    /**
-     * Set a custom polling frequency for watching pin changes
-     *
-     * @param {number} value The frequency to poll at, in milliseconds
-     */
-    this.setPollFrequency = function(value) {
-        if (typeof value === 'number') {
-            pollFrequency = value;
-        }
-    };
+		// Wiring Pi requires a direction
+		if(currentExportUtility === self.EXPORT_WIRING_PI_GPIO){
+			exportCommand += ' ' + direction;
+		}
 
-    /**
-     * Setup a channel for use as an input or output
-     *
-     * @param {number}   channel   Reference to the pin in the current mode's schema
-     * @param {string}   direction The pin direction, either 'in' or 'out'
-     * @param {function} onSetup   Optional callback
-     */
-    this.setup = function(channel, direction, onSetup /*err*/) {
-        if (arguments.length === 2 && typeof direction == 'function') {
-            onSetup = direction;
-            direction = this.DIR_OUT;
-        }
+		exec(exportCommand, {}, function () {
+			if(direction === self.DIR_IN && currentExportUtility === self.EXPORT_WIRING_PI_GPIO){
+				debug('setting edge for pin %d', pin);
 
-        direction = direction || this.DIR_OUT;
-        onSetup = onSetup || function() {};
+				exec(edgeCommand, {}, function () {
+					cb();
+				});
+			} else {
+				cb();
+			}
+		});
+	}
 
-        if (!channel) {
-            return process.nextTick(function() {
-                onSetup(new Error('Channel must be a number'));
-            });
-        }
+	function unexportPin(pin, cb) {
+		debug('unexport pin %d', pin);
 
-        if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
-            return process.nextTick(function() {
-                onSetup(new Error('Cannot set invalid direction'));
-            });
-        }
+		var unexportCommand = currentExportUtility + " unexport " + pin,
+			poller;
 
-        var pinForSetup;
-        async.waterfall([
-            setRaspberryVersion,
-            function(next) {
-                pinForSetup = getPinForCurrentMode(channel);
-                if (!pinForSetup) {
-                    return next(new Error('Channel ' + channel + ' does not map to a GPIO pin'));
-                }
-                debug('set up pin %d', pinForSetup);
-                isExported(pinForSetup, next);
-            },
-            function(isExported, next) {
-                if (isExported) {
-                    return unexportPin(pinForSetup, next);
-                }
-                return next(null);
-            },
-            function(next) {
-                exportPin(pinForSetup, next);
-            },
-            function(next) {
-                this.emit('export', channel);
-                createListener.call(this, channel, pinForSetup);
+		if(pollers.hasOwnProperty(pin)){
+			poller = pollers[pin];
+			poller.Poller.remove(poller.ValueFile).close();
+			delete pollers[pin];
+		}
+		
+		exec(unexportCommand, {}, function () {
+			cb();
+		});
+	}
 
-                if (direction === this.DIR_IN) {
-                    exportedInputPins[pinForSetup] = true;
-                } else {
-                    exportedOutputPins[pinForSetup] = true;
-                }
+	function isExported(pin, cb) {
+		fs.exists(PATH + '/gpio' + pin, function (exists) {
+			return cb(null, exists);
+		});
+	}
 
-                setDirection(pinForSetup, direction, next);
-            }.bind(this)
-        ], onSetup);
-    };
+	function setRaspberryVersion(cb) {
+		if(currentPins) {
+			return cb(null);
+		}
 
-    /**
-     * Write a value to a channel
-     *
-     * @param {number}   channel The channel to write to
-     * @param {boolean}  value   If true, turns the channel on, else turns off
-     * @param {function} cb      Optional callback
-     */
-    this.write = this.output = function(channel, value, cb /*err*/ ) {
-        var pin = getPinForCurrentMode(channel);
+		fs.readFile('/proc/cpuinfo', 'utf8', function (err, data) {
+			if(err) {
+				return cb(err);
+			}
 
-        if (!exportedOutputPins[pin]) {
-            var message;
-            if (exportedInputPins[pin]) {
-                message = 'Pin has been exported for input so cannot be written to';
-            } else {
-                message = 'Pin has not been exported';
-            }
+			// Match the last 4 digits of the number following "Revision:"
+			var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+			var revisionNumber = parseInt(match[1], 16);
+			var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
 
-            return process.nextTick(function() {
-                cb(new Error(message));
-            });
-        }
+			debug(
+				'seen hardware revision %d; using pin mode %s',
+				revisionNumber,
+				pinVersion
+			);
 
-        value = (!!value && value !== '0') ? '1' : '0';
-        fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb || function () {});
-    };
+			currentPins = PINS[pinVersion];
 
-    /**
-     * Read a value from a channel
-     *
-     * @param {number}   channel The channel to read from
-     * @param {function} cb      Callback which receives the channel's boolean value
-     */
-    this.read = this.input = function(channel, cb /*err,value*/) {
-        var pin = getPinForCurrentMode(channel);
+			return cb(null);
+		});
+	}
 
-        if (!exportedInputPins[pin]) {
-            return process.nextTick(function() {
-                cb(new Error('Pin has not been exported'));
-            });
-        }
+	function getPinRpi(channel) {
+		return currentPins[channel].toString();
+	}
 
-        fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
-            data = (data + '').trim() || '0';
-            return cb(err, data === '1');
-        });
-    };
+	function getPinBcm(channel) {
+		var parsedChannel = parseInt(channel, 10);
+		return bcmChannels.indexOf(parsedChannel) !== -1 ? channel : null;
+	}
 
-    /**
-     * Unexport any pins setup by this module
-     *
-     * @param {function} cb Optional callback
-     */
-    this.destroy = function(cb) {
-        var tasks = Object.keys(exportedOutputPins)
-            .concat(Object.keys(exportedInputPins))
-            .map(function(pin) {
-                return function(done) {
-                    unexportPin(pin, done);
-                }
-            });
+	function createListener(channel, pin) {
+		debug('Creating a listener for Channel ' + channel + ', Pin ' + pin);
+		var channelPath = PATH + '/gpio' + pin + '/value',
+			valuefd = fs.openSync(channelPath, 'r'),
+			buffer = new Buffer(1),
+			poller = new Epoll(function(err, fd, events) {
+				if(err){
+					console.error(err);
+				}
+				fs.readSync(fd, buffer, 0, 1, 0);
+				var bufferedValue = buffer.toString();
+				debug(events, bufferedValue);
+				self.emit('change', channel, bufferedValue === '1');
+			});
 
-        async.parallel(tasks, cb);
-    };
+		fs.readSync(valuefd, buffer, 0, 1, 0);
 
-    /**
-     * Reset the state of the module
-     */
-    this.reset = function() {
-        exportedOutputPins = {};
-        exportedInputPins  = {};
-        this.removeAllListeners();
+		poller.add(valuefd, Epoll.EPOLLPRI);
 
-        currentPins = undefined;
-        getPinForCurrentMode = getPinRpi;
-        pollFrequency = 5007;
-    };
+		pollers[pin] = {
+			Poller: poller,
+			ValueFile: valuefd
+		};
+	}
 
-    // Init
-    EventEmitter.call(this);
-    this.reset();
+	/**
+	 * Set pin reference mode. Defaults to 'mode_rpi'.
+	 *
+	 * @param {string} mode Pin reference mode, 'mode_rpi' or 'mode_bcm'
+	 */
+	self.setMode = function (mode) {
+		if(mode === self.MODE_RPI) {
+			getPinForCurrentMode = getPinRpi;
+		} else if(mode === self.MODE_BCM) {
+			getPinForCurrentMode = getPinBcm;
+		} else {
+			throw new Error('Cannot set invalid mode');
+		}
 
+		self.emit('modeChange', mode);
+	};
 
-    // Private functions requring access to state
-    function setRaspberryVersion(cb) {
-        if (currentPins) {
-            return cb(null);
-        }
+	/**
+	 * Set Export Utility. Defaults to 'EXPORT_WIRING_PI_GPIO'.
+	 *
+	 * @param {string} exportUtility, 'EXPORT_GPIO_ADMIN' or 'EXPORT_WIRING_PI_GPIO'
+	 */
+	self.setExportUtility = function (exportUtility) {
+		if(exportUtility === self.EXPORT_GPIO_ADMIN || exportUtility === self.EXPORT_WIRING_PI_GPIO) {
+			currentExportUtility = exportUtility;
+		} else {
+			throw new Error('Cannot set invalid export utility ' + exportUtility);
+		}
 
-        fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
-            if (err) return cb(err);
+		self.emit('exportUtilityChange', exportUtility);
+	};
 
-            // Match the last 4 digits of the number following "Revision:"
-            var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
-            var revisionNumber = parseInt(match[1], 16);
-            var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
+	/**
+	 * Setup a channel for use as an input or output
+	 *
+	 * @param {number}   channel   Reference to the pin in the current mode's schema
+	 * @param {string}   direction The pin direction, either 'in' or 'out'
+	 * @param {function} onSetup   Optional callback
+	 */
+	self.setup = function (channel, direction, onSetup /*err*/ ) {
+		if(arguments.length === 2 && typeof direction === 'function') {
+			onSetup = direction;
+			direction = self.DIR_OUT;
+		}
 
-            debug(
-                'seen hardware revision %d; using pin mode %s',
-                revisionNumber,
-                pinVersion
-            );
+		direction = direction || self.DIR_OUT;
+		onSetup = onSetup || function () {
+			return;
+		};
 
-            currentPins = PINS[pinVersion];
+		if(!channel) {
+			return process.nextTick(function () {
+				onSetup(new Error('Channel must be a number'));
+			});
+		}
 
-            return cb(null);
-        });
-    };
+		if(direction !== self.DIR_IN && direction !== self.DIR_OUT) {
+			return process.nextTick(function () {
+				onSetup(new Error('Cannot set invalid direction'));
+			});
+		}
 
-    function getPinRpi(channel) {
-        return currentPins[channel] + '';
-    };
+		var pinForSetup;
+		async.waterfall([
+			setRaspberryVersion,
+			function (next) {
+				pinForSetup = getPinForCurrentMode(channel);
+				if(!pinForSetup) {
+					return next(new Error('Channel ' + channel + ' does not map to a GPIO pin'));
+				}
+				debug('set up pin %d', pinForSetup);
+				isExported(pinForSetup, next);
+			},
+			function (isExported, next) {
+				if(isExported) {
+					return unexportPin(pinForSetup, next);
+				}
+				return next(null);
+			},
+			function (next) {
+				exportPin(pinForSetup, next, direction);
+			},
+			function (next) {
+				self.emit('export', channel);
 
-    function getPinBcm(channel) {
-        channel = parseInt(channel, 10);
-        return [
-            3,
-            5,
-            7,
-            8,
-            10,
-            11,
-            12,
-            13,
-            15,
-            16,
-            18,
-            19,
-            21,
-            22,
-            23,
-            24,
-            26,
-            29,
-            31,
-            32,
-            33,
-            35,
-            36,
-            37,
-            38,
-            40
-        ].indexOf(channel) !== -1 ? (channel + '') : null;
-    };
+				createListener.call(self, channel, pinForSetup);
 
-    function createListener(channel, pin) {
-        debug('listen for pin %d', pin);
-        var Gpio = this;
-        fs.watchFile(
-            PATH + '/gpio' + pin + '/value',
-            { persistent: true, interval: pollFrequency },
-            function(current, previous) {
-                if (current.mtime > previous.mtime) {
-                    Gpio.read(channel, function(err, value) {
-                        debug(
-                            'failed to read value after a change on channel %d',
-                            channel
-                        );
-                        Gpio.emit('change', channel, value);
-                    });
-                }
-            }
-        );
-    };
+				if(direction === self.DIR_IN) {
+					exportedInputPins[pinForSetup] = true;
+				} else {
+					exportedOutputPins[pinForSetup] = true;
+				}
+
+				return next(null);
+			}.bind(self)
+		], onSetup);
+	};
+
+	/**
+	 * Write a value to a channel
+	 *
+	 * @param {number}   channel The channel to write to
+	 * @param {boolean}  value   If true, turns the channel on, else turns off
+	 * @param {function} cb      Optional callback
+	 */
+	self.write = self.output = function (channel, value, cb /*err*/ ) {
+		var pin = getPinForCurrentMode(channel);
+
+		if(!exportedOutputPins[pin]) {
+			var message;
+			if(exportedInputPins[pin]) {
+				message = 'Pin ' + pin + ' (Channel ' + channel + ') has been exported for input so cannot be written to';
+			} else {
+				message = 'Pin ' + pin + ' (Channel ' + channel + ') has not been exported';
+			}
+
+			return process.nextTick(function () {
+				cb(new Error(message));
+			});
+		}
+
+		value = (!!value && value !== '0') ? '1' : '0';
+		fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb || function () {
+			return;
+		});
+	};
+
+	/**
+	 * Read a value from a channel
+	 *
+	 * @param {number}   channel The channel to read from
+	 * @param {function} cb      Callback which receives the channel's boolean value
+	 */
+	self.read = self.input = function (channel, cb /*err,value*/ ) {
+		var pin = getPinForCurrentMode(channel);
+
+		if(!exportedInputPins[pin]) {
+			return process.nextTick(function () {
+				cb(new Error('Pin ' + pin + ' (Channel ' + channel + ') has not been exported'));
+			});
+		}
+
+		fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function (err, data) {
+			data = (data.toString()).trim() || '0';
+			return cb(err, data === '1');
+		});
+	};
+
+	/**
+	 * Unexport any pins setup by this module
+	 *
+	 * @param {function} cb Optional callback
+	 */
+	self.destroy = function (cb) {
+		var tasks = Object.keys(exportedOutputPins)
+			.concat(Object.keys(exportedInputPins))
+			.map(function (pin) {
+				return function (done) {
+					unexportPin(pin, done);
+				};
+			});
+
+		async.parallel(tasks, cb);
+	};
+
+	/**
+	 * Reset the state of the module
+	 */
+	self.reset = function () {
+		exportedOutputPins = {};
+		exportedInputPins = {};
+		self.removeAllListeners();
+
+		currentPins = undefined;
+		getPinForCurrentMode = getPinRpi;
+		currentExportUtility = self.EXPORT_WIRING_PI_GPIO;
+	};
+
+	// Init
+	EventEmitter.call(self);
+	self.reset();
 }
 util.inherits(Gpio, EventEmitter);
 
-function setDirection(pin, direction, cb) {
-    debug('set direction %s on pin %d', direction.toUpperCase(), pin);
-    fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
-        if (cb) return cb(err);
-    });
-}
-
-function exportPin(pin, cb) {
-    debug('export pin %d', pin);
-    fs.writeFile(PATH + '/export', pin, function(err) {
-        if (cb) return cb(err);
-    });
-}
-
-function unexportPin(pin, cb) {
-    debug('unexport pin %d', pin);
-    fs.unwatchFile(PATH + '/gpio' + pin + '/value');
-    fs.writeFile(PATH + '/unexport', pin, function(err) {
-        if (cb) return cb(err);
-    });
-}
-
-function isExported(pin, cb) {
-    fs.exists(PATH + '/gpio' + pin, function(exists) {
-        return cb(null, exists);
-    });
-}
-
-module.exports = new Gpio;
+module.exports = new Gpio();
