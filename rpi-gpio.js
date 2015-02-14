@@ -82,76 +82,71 @@ function Gpio() {
 				'38': 20,
 				// 39: ground
 				'40': 21
-			}
+			},
+			BCM: [
+				3,
+				5,
+				7,
+				8,
+				10,
+				11,
+				12,
+				13,
+				15,
+				16,
+				18,
+				19,
+				21,
+				22,
+				23,
+				24,
+				26,
+				29,
+				31,
+				32,
+				33,
+				35,
+				36,
+				37,
+				38,
+				40
+			]
 		},
 		currentPins,
-		currentExportUtility,
 		exportedInputPins = {},
 		exportedOutputPins = {},
 		getPinForCurrentMode,
-		pollers = {},
-		bcmChannels = [
-			3,
-			5,
-			7,
-			8,
-			10,
-			11,
-			12,
-			13,
-			15,
-			16,
-			18,
-			19,
-			21,
-			22,
-			23,
-			24,
-			26,
-			29,
-			31,
-			32,
-			33,
-			35,
-			36,
-			37,
-			38,
-			40
-		];
+		pollers = {};
 
 	self.DIR_IN = 'in';
 	self.DIR_OUT = 'out';
 	self.MODE_RPI = 'mode_rpi';
 	self.MODE_BCM = 'mode_bcm';
-	self.EXPORT_GPIO_ADMIN = 'gpio-admin';
-	self.EXPORT_WIRING_PI_GPIO = 'gpio';
 
 	// Private functions
 	function exportPin(pin, direction) {
 		debug('export pin %d', pin);
-		var exportCommand = currentExportUtility + ' export ' + pin,
-			edgeCommand = currentExportUtility + ' edge ' + pin + ' both';
+		var exportCommand = 'gpio export ' + pin + ' ' + direction,
+			edgeCommand = 'gpio edge ' + pin + ' both';
 
-		// Wiring Pi requires a direction
-		if(currentExportUtility === self.EXPORT_WIRING_PI_GPIO){
-			exportCommand += ' ' + direction;
-		}
+		return exec(exportCommand, {})
+			.then(function () {
+				if(direction === self.DIR_IN){
+					debug('setting edge for pin %d', pin);
 
-		return exec(exportCommand, {}).then(function () {
-			if(direction === self.DIR_IN && currentExportUtility === self.EXPORT_WIRING_PI_GPIO){
-				debug('setting edge for pin %d', pin);
+					return exec(edgeCommand, {}).then(function(){
+						return pin;
+					});
+				} 
 
-				return exec(edgeCommand, {});
-			} 
-
-			return null;
-		});
+				return pin;
+			});
 	}
 
 	function unexportPin(pin) {
 		debug('unexport pin %d', pin);
 
-		var unexportCommand = currentExportUtility + " unexport " + pin,
+		var unexportCommand = "gpio unexport " + pin,
 			poller;
 
 		if(pollers.hasOwnProperty(pin)){
@@ -197,7 +192,7 @@ function Gpio() {
 
 	function getPinBcm(channel) {
 		var parsedChannel = parseInt(channel, 10);
-		return bcmChannels.indexOf(parsedChannel) !== -1 ? channel : null;
+		return PINS.BCM.indexOf(parsedChannel) !== -1 ? channel : null;
 	}
 
 	function createListener(channel, pin) {
@@ -241,22 +236,7 @@ function Gpio() {
 
 		self.emit('modeChange', mode);
 
-		return null;
-	};
-
-	/**
-	 * Set Export Utility. Defaults to 'EXPORT_WIRING_PI_GPIO'.
-	 *
-	 * @param {string} exportUtility, 'EXPORT_GPIO_ADMIN' or 'EXPORT_WIRING_PI_GPIO'
-	 */
-	self.setExportUtility = function (exportUtility) {
-		if(exportUtility === self.EXPORT_GPIO_ADMIN || exportUtility === self.EXPORT_WIRING_PI_GPIO) {
-			currentExportUtility = exportUtility;
-		} else {
-			throw new Error('Cannot set invalid export utility ' + exportUtility);
-		}
-
-		self.emit('exportUtilityChange', exportUtility);
+		return mode;
 	};
 
 	/**
@@ -361,9 +341,9 @@ function Gpio() {
 
 		return Q.nfcall(fs.readFile, PATH + '/gpio' + pin + '/value', 'utf-8')
 			.then(function (data) {
-			data = (data.toString()).trim() || '0';
-			return data === '1';
-		});
+				data = (data.toString()).trim() || '0';
+				return data === '1';
+			});
 	};
 
 	/**
@@ -399,7 +379,6 @@ function Gpio() {
 
 		currentPins = undefined;
 		getPinForCurrentMode = getPinRpi;
-		currentExportUtility = self.EXPORT_WIRING_PI_GPIO;
 
 		return null;
 	};
