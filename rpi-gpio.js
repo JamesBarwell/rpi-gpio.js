@@ -371,14 +371,22 @@ function Gpio() {
 	 *
 	 * @param {function} cb Optional callback
 	 */
-	self.destroy = function () {
-		var tasks = Object.keys(exportedOutputPins)
-			.concat(Object.keys(exportedInputPins))
-			.map(function (pin) {
-				return unexportPin(pin);
-			});
+	self.destroy = function (data) {
+		debug('Cleaning up GPIO');
 
-		return Q.all(tasks);
+		var commandText = 'gpio unexportall',
+			tasks = Object.keys(exportedOutputPins)
+				.concat(Object.keys(exportedInputPins))
+				.map(function (pin) {
+					return unexportPin(pin);
+				});
+
+		return exec(commandText, {})
+			.all(tasks)
+			.then(function(){
+				// allow data pass-through
+				return data;
+			});
 	};
 
 	/**
