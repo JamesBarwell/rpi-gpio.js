@@ -82,6 +82,7 @@ var PINS = {
 
 function Gpio() {
     var currentPins;
+    var bcmPins = [];
     var exportedInputPins  = {};
     var exportedOutputPins = {};
     var getPinForCurrentMode = getPinRpi;
@@ -288,6 +289,12 @@ function Gpio() {
 
             currentPins = PINS[pinVersion];
 
+			Object.keys(currentPins).forEach(	
+				function(pin) {
+					var pinNumber = currentPins[pin];
+					bcmPins.push(pinNumber);			
+				});
+
             return cb(null);
         });
     };
@@ -298,34 +305,7 @@ function Gpio() {
 
     function getPinBcm(channel) {
         channel = parseInt(channel, 10);
-        return [
-            3,
-            5,
-            7,
-            8,
-            10,
-            11,
-            12,
-            13,
-            15,
-            16,
-            18,
-            19,
-            21,
-            22,
-            23,
-            24,
-            26,
-            29,
-            31,
-            32,
-            33,
-            35,
-            36,
-            37,
-            38,
-            40
-        ].indexOf(channel) !== -1 ? (channel + '') : null;
+        return bcmPins.indexOf(channel) !== -1 ? (channel + '') : null;
     };
 
     function createListener(channel, pin) {
