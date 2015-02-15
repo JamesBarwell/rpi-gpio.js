@@ -82,58 +82,25 @@ function RaspberryPiVirtualHardware(){
 				'38': 20,
 				// 39: ground
 				'40': 21
-			},
-			BCM: [
-				3,
-				5,
-				7,
-				8,
-				10,
-				11,
-				12,
-				13,
-				15,
-				16,
-				17,
-				18,
-				19,
-				20,
-				21,
-				22,
-				23,
-				24,
-				26,
-				27,
-				29,
-				31,
-				32,
-				33,
-				35,
-				36,
-				37,
-				38,
-				40
-			]
+			}
 		},
 		pinVersion,
 		currentPins;
 
-	function detectHardwareVersion() {		
-		return Q.nfcall(fs.readFile, '/proc/cpuinfo', 'utf8')
-			.then(function(data){
-				// Match the last 4 digits of the number following "Revision:"
-				var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
-				var revisionNumber = parseInt(match[1], 16);
-				var version = (revisionNumber < 4) ? 'v1' : 'v2';
+	function detectHardwareVersion() {
+		var data = fs.readFileSync('/proc/cpuinfo', 'utf8');
+		// Match the last 4 digits of the number following "Revision:"
+		var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+		var revisionNumber = parseInt(match[1], 16);
+		var version = (revisionNumber < 4) ? 'v1' : 'v2';
 
-				debug(
-					'Detected hardware revision %d; using pin mode %s',
-					revisionNumber,
-					version
-				);
+		debug(
+			'Detected hardware revision %d; using pin mode %s',
+			revisionNumber,
+			version
+		);
 
-				return version;
-			});
+		return version;
 	}
 
 	function getPinRpi(channel) {
@@ -141,8 +108,10 @@ function RaspberryPiVirtualHardware(){
 	}
 
 	function getPinBcm(channel) {
-		var parsedChannel = parseInt(channel, 10);
-		return PINS.BCM.indexOf(parsedChannel) !== -1 ? channel : null;
+		var parsedChannel = parseInt(channel, 10),
+			bcmPins = PINS[pinVersion + 'BCM'];
+
+		return (!!bcmPins && bcmPins.indexOf(parsedChannel) !== -1) ? channel : null;
 	}
 
 	self.getPinForChannel = function(channel, mode) {
@@ -163,6 +132,14 @@ function RaspberryPiVirtualHardware(){
 	self.getPinGpioValuePath = function(pin) {
 		return PATH + '/gpio' + pin + '/value'; 
 	};
+
+	PINS.v1BCM = Object.keys(PINS.v1).map(function(pin) {
+		return PINS.v1[pin];
+	});
+
+	PINS.v2BCM = Object.keys(PINS.v2).map(function(pin) {
+		return PINS.v2[pin];
+	});
 
 	pinVersion = detectHardwareVersion();
 	currentPins = PINS[pinVersion];
