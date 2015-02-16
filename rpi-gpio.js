@@ -1,13 +1,13 @@
 /*jslint node: true, white: true */
 var fs = require('fs'),
-	util = require('util'),
-	EventEmitter = require('events').EventEmitter,
 	Q = require('q'),
 	exec = Q.denodeify(require('child_process').exec),
-    Epoll = require('epoll').Epoll,
-	debug = require('debug')('rpi-gpio');
+	Epoll = require('epoll').Epoll,
+	gpiodebug = require('debug')('gpio-manager'),
+	gpiopindebug = require('debug')('gpio-pin'),
+	gpiorpidebug = require('debug')('gpio-pin');
 
-function RaspberryPiVirtualHardware(){
+function RaspberryPiVirtualHardware() {
 	var self = this,
 		PATH = '/sys/class/gpio',
 		PINS = {
@@ -94,7 +94,7 @@ function RaspberryPiVirtualHardware(){
 		var revisionNumber = parseInt(match[1], 16);
 		var version = (revisionNumber < 4) ? 'v1' : 'v2';
 
-		debug(
+		gpiorpidebug(
 			'Detected hardware revision %d; using pin mode %s',
 			revisionNumber,
 			version
@@ -111,196 +111,244 @@ function RaspberryPiVirtualHardware(){
 		var parsedChannel = parseInt(channel, 10),
 			bcmPins = PINS[pinVersion + 'BCM'];
 
-		return (!!bcmPins && bcmPins.indexOf(parsedChannel) !== -1) ? channel : null;
+		return(!!bcmPins && bcmPins.indexOf(parsedChannel) !== -1) ? channel : null;
 	}
 
-	self.getPinForChannel = function(channel, mode) {
+	self.getPinForChannel = function (channel, mode) {
 		switch(mode.toLowerCase()) {
-			case 'rpi':
-				return getPinRpi(channel);
-			case 'bcm':
-				return getPinBcm(channel);
-			default:
-				throw new Error('Could not find a pin set for channel ' + channel + ' using mode ' + mode);
+		case 'rpi':
+			return getPinRpi(channel);
+		case 'bcm':
+			return getPinBcm(channel);
+		default:
+			throw new Error('Could not find a pin set for channel ' + channel + ' using mode ' + mode);
 		}
 	};
 
-	self.getPinGpioPath = function(pin) {
-		return PATH + '/gpio' + pin; 
+	self.getPinGpioPath = function (pin) {
+		return PATH + '/gpio' + pin;
 	};
 
-	self.getPinGpioValuePath = function(pin) {
-		return PATH + '/gpio' + pin + '/value'; 
+	self.getPinGpioValuePath = function (pin) {
+		return PATH + '/gpio' + pin + '/value';
 	};
 
-	PINS.v1BCM = Object.keys(PINS.v1).map(function(pin) {
-		return PINS.v1[pin];
-	});
+	PINS.v1BCM = Object.keys(PINS.v1)
+		.map(function (pin) {
+			return PINS.v1[pin];
+		});
 
-	PINS.v2BCM = Object.keys(PINS.v2).map(function(pin) {
-		return PINS.v2[pin];
-	});
+	PINS.v2BCM = Object.keys(PINS.v2)
+		.map(function (pin) {
+			return PINS.v2[pin];
+		});
 
 	pinVersion = detectHardwareVersion();
 	currentPins = PINS[pinVersion];
 }
 
-function Gpio() {
+function GpioPin(options) {
+	// Sanitize before even trying to initialize
+	if(!options || typeof options !== 'object') {
+		throw new Error('An options object is required to setup a pin.' + options);
+	}
+
+	if(!options.pin) {
+		throw new Error('A valid pin must be specified.');
+	}
+
+	if(!options.pinFilePath) {
+		throw new Error('A valid pin filepath must be specified.');
+	}
+
+	if(!options.channel) {
+		throw new Error('A valid channel assignment must be specified.');
+	}
+
+	if(!options.direction || (options.direction !== 'in' && options.direction !== 'out')) {
+		throw new Error('A valid pin direction must be specified.');
+	}
+
+	// Private Variables
 	var self = this,
-		raspberryPi = new RaspberryPiVirtualHardware(),
+		isInput = options.direction === 'in',
+		promiseChain,
+		poller,
+		pollerValueFile,
+		pollerBuffer = new Buffer(1),
+		// Commands
+		exportCommand = 'gpio export ' + options.pin + ' ' + options.direction,
+		edgeCommand = 'gpio edge ' + options.pin + ' both',
+		unexportCommand = "gpio unexport " + options.pin;
+
+	// private methods
+	function writeToPin(value) {
+		if(isInput) {
+			throw new Error('Cannot write "' + value + '" to read-only input pin ' + options.pin + '.');
+		}
+
+		value = (!!value && value !== '0') ? '1' : '0';
+		return Q.nfcall(fs.writeFile, options.pinFilePath, value);	
+	}
+
+	function readFromPin() {
+		return Q.nfcall(fs.readFile, options.pin, 'utf-8')
+			.then(function (data) {
+				data = (data.toString()).trim() || '0';
+
+				return data === '1';
+			});
+	}
+
+	function createPoller() {
+		pollerValueFile = fs.openSync(options.pinFilePath, 'r');
+		poller = new Epoll(function (err, fd) {
+			if(err) {
+				gpiopindebug('An error occurred attempt to setup a poller for pin %d, channel %s: %s', options.pin, options.channel, err.stack);
+				return;
+			}
+
+			fs.readSync(fd, pollerBuffer, 0, 1, 0);
+			var bufferedValue = pollerBuffer.toString();
+
+			self.onChange(bufferedValue === '1');
+		});
+
+		fs.readSync(pollerValueFile, pollerBuffer, 0, 1, 0);
+
+		poller.add(pollerValueFile, Epoll.EPOLLPRI);
+	}
+
+	function unexport() {
+		if(poller) {
+			poller.remove(pollerValueFile).close();
+			poller = null;
+		}
+
+		return exec(unexportCommand, {});
+	}
+
+	// Public Properties
+	self.Channel = options.channel;
+	self.Pin = options.pin;
+	self.PinFilePath = options.pinFilePath;
+	self.Direction = options.direction;
+
+	// Public Methods
+	self.write = writeToPin;
+
+	self.read = readFromPin;
+
+	self.destroy = unexport;
+
+	self.onChange = function(value) {
+		gpiopindebug('Value for pin %d, channel %s, changed to %s', options.pin, options.channel, value);
+		return;
+	};
+
+	// Return promise to initialize
+
+	gpiopindebug('Exporting pin %d', options.pin);
+
+	promiseChain = exec(exportCommand, {});
+
+	// If this is an input, we need to set the edge value
+	// so that we can get proper readings
+	if(isInput) {
+		promiseChain = promiseChain.then(function(){
+			return exec(edgeCommand, {});
+		});
+	}
+
+	return promiseChain
+		.then(createPoller)
+		.then(function() {
+			gpiopindebug('Finished creating GPIO Pin mapping to pin %d, channel %s', options.pin, options.channel);
+		})
+		.then(function() {
+			return self;
+		});
+}
+
+function GpioManager(raspberryPiHardware) {
+	var self = this,
+		raspberryPi = raspberryPiHardware || new RaspberryPiVirtualHardware(),
 		currentMode,
-		exportedInputPins = {},
-		exportedOutputPins = {},
-		pollers = {};
+		exportedPins = {};
 
 	// Private functions
-	function exportPin(channelConfig) {
-		var pin = channelConfig.pin,
-			direction = channelConfig.direction,
-			exportCommand = 'gpio export ' + pin + ' ' + direction,
-			edgeCommand = 'gpio edge ' + pin + ' both';
-
-		debug('Exporting pin %d', pin);
-
-		return exec(exportCommand, {})
-			.then(function() {
-				if(direction === self.DIR_IN){
-					debug('setting edge for pin %d', pin);
-
-					return exec(edgeCommand, {}).then(function() {
-						self.emit('export', channelConfig.Channel);
-						return channelConfig;
-					});
-				} 
-
-				self.emit('export', channelConfig.Channel);
-				return channelConfig;
-			});
-	}
-
-	function unexportPin(channelConfig) {
-		var pin = channelConfig.pin;
-
-		debug('unexport pin %d', pin);
-
-		var unexportCommand = "gpio unexport " + pin,
-			poller;
-
-		if(pollers.hasOwnProperty(pin)){
-			poller = pollers[pin];
-			debug('Removing poller %d', pin);
-			poller.Poller.remove(poller.ValueFile).close();
-			delete pollers[pin];
-		}
-		
-		return exec(unexportCommand, {})
-			.then(function(){
-				return channelConfig;
-			});
-	}
-
-	function mapChannelToPin(channelConfig) {
-		var channel = channelConfig.channel,
-			pin = raspberryPi.getPinForChannel(channel, currentMode);
+	function resolvePinAddress(config) {
+		var pin = raspberryPi.getPinForChannel(config.channel, currentMode);
 
 		if(!pin) {
-			throw new Error('Channel ' + channel + ' does not map to a GPIO pin');
+			throw new Error('Channel ' + config.channel + ' does not map to a GPIO pin');
 		}
 
-		debug('set up pin %d', pin);
-		channelConfig.pin = pin;
+		config.pin = pin;
+		gpiodebug('set up pin %d', pin);
 
-		return channelConfig;
+		return config;
 	}
 
-	function cachePinDirection(channelConfig) {
-		debug('Caching config direction for pin %d, with a direction of %s', channelConfig.pin, channelConfig.direction);
-		if(channelConfig.direction === self.DIR_IN) {
-			exportedInputPins[channelConfig.pin] = true;
-		} else {
-			exportedOutputPins[channelConfig.pin] = true;
+	function resolvePinFilePath(config) {
+		var filepath = raspberryPi.getPinGpioValuePath(config.pin);
+		config.pinFilePath = filepath;
+
+		return config;
+	}
+
+	function createGpioPinMapping(config) {
+		if(!!exportedPins[config.pin]) {
+			throw new Error('The pin %d, channel %s, has already been assigned!', config.pin, config.channel);
 		}
 
-		return channelConfig;
+		var gpioPin = new GpioPin(config);
+
+		exportedPins[config.pin] = gpioPin;
+
+		return exportedPins[config.pin];
 	}
 
-	function createListener(channelConfig) {
-		debug('Creating a listener for Channel ' + channelConfig.channel + ', Pin ' + channelConfig.pin);
-		var channel = channelConfig.channel,
-			pin = channelConfig.pin,
-			channelPath = raspberryPi.getPinGpioValuePath(pin),
-			valuefd = fs.openSync(channelPath, 'r'),
-			buffer = new Buffer(1),
-			poller = new Epoll(function(err, fd, events) {
-				if(err){
-					console.error(err);
-				}
-				fs.readSync(fd, buffer, 0, 1, 0);
-				var bufferedValue = buffer.toString();
-				debug(events, bufferedValue);
-				self.emit('change', channel, bufferedValue === '1');
-			});
-
-		fs.readSync(valuefd, buffer, 0, 1, 0);
-
-		poller.add(valuefd, Epoll.EPOLLPRI);
-
-		pollers[pin] = {
-			Poller: poller,
-			ValueFile: valuefd
-		};
-
-		return channelConfig;
-	}
-
+	// Public Properties
 	self.DIR_IN = 'in';
 	self.DIR_OUT = 'out';
 	self.MODE_RPI = 'rpi';
 	self.MODE_BCM = 'bcm';
 
+	// Public Methods
+
 	/**
 	 * Set pin reference mode. Defaults to 'mode_rpi'.
-	 *
-	 * @param {string} mode Pin reference mode, 'mode_rpi' or 'mode_bcm'
 	 */
 	self.setMode = function (mode) {
 		currentMode = mode;
-
-		self.emit('modeChange', mode);
 
 		return currentMode;
 	};
 
 	/**
 	 * Setup a channel for use as an input or output
-	 *
-	 * @param {number}   channel   Reference to the pin in the current mode's schema
-	 * @param {string}   direction The pin direction, either 'in' or 'out'
-	 * @param {function} onSetup   Optional callback
 	 */
-	self.setup = function (channelConfig) {
-		var channel = channelConfig.channel,
-			direction = channelConfig.direction;
-
-		if(!channel) {
-			throw new Error('Channel must be a number, was given ' + channel);
+	self.setup = function (config) {
+		if(!config && typeof config !== 'object') {
+			throw new Error('A valid configuration object must be supplied.');
+		}
+		if(!config.channel) {
+			throw new Error('Channel must be defined.');
 		}
 
-		if(direction !== self.DIR_IN && direction !== self.DIR_OUT) {
+		if(config.direction !== self.DIR_IN && config.direction !== self.DIR_OUT) {
 			throw new Error('Cannot set invalid direction');
 		}
 
 		return Q.fcall(function () {
-				return channelConfig;
+				return config;
 			})
-			.then(mapChannelToPin)
-			// Force an unexport just in case
-			.then(unexportPin)
-			.then(exportPin)
-			.then(createListener)
-			.then(cachePinDirection)
-			.catch(function(err){
-				debug('An error occurred during setup.', err.stack);
+			.then(resolvePinAddress)
+			.then(resolvePinFilePath)
+			.then(createGpioPinMapping)
+			.catch(function (err) {
+				gpiodebug('An error occurred during setup.', err.stack);
 				throw err;
 			});
 	};
@@ -312,67 +360,53 @@ function Gpio() {
 	 * @param {boolean}  value   If true, turns the channel on, else turns off
 	 * @param {function} cb      Optional callback
 	 */
-	self.write = self.output = function (channelValue) {
-		var channel = channelValue.channel,
-			value = channelValue.value,
-			pin = raspberryPi.getPinForChannel(channel, currentMode);
+	self.write = self.output = function (config) {
+		gpiodebug('Attempting to write to channel %d a value of %s', config.channel, config.value);
+		var pin = raspberryPi.getPinForChannel(config.channel, currentMode),
+			gpioPin = exportedPins[pin];
 
-		if(!exportedOutputPins[pin]) {
-			var message;
-			if(exportedInputPins[pin]) {
-				message = 'Pin ' + pin + ' (Channel ' + channel + ') has been exported for input so cannot be written to';
-			} else {
-				message = 'Pin ' + pin + ' (Channel ' + channel + ') has not been exported';
-			}
-
-			throw new Error(message);
+		if(!gpioPin) {
+			throw new Error('Could not find exported GPIO pin %d, channel %s.', pin, config.channel);
 		}
 
-		value = (!!value && value !== '0') ? '1' : '0';
-		return Q.nfcall(fs.writeFile, raspberryPi.getPinGpioValuePath(pin), value);
+		return gpioPin.write(config.value);
 	};
 
 	/**
 	 * Read a value from a channel
-	 *
-	 * @param {number}   channel The channel to read from
-	 * @param {function} cb      Callback which receives the channel's boolean value
 	 */
-	self.read = self.input = function (channel) {
-		var pin = raspberryPi.getPinForChannel(channel, currentMode);
+	self.read = self.input = function (config) {
+		gpiodebug('Attempting to read from channel %d', config.channel);
 
-		if(!exportedInputPins[pin]) {
-			return process.nextTick(function () {
-				throw new Error('Pin ' + pin + ' (Channel ' + channel + ') has not been exported');
-			});
+		var pin = raspberryPi.getPinForChannel(config.channel, currentMode),
+			gpioPin = exportedPins[pin];
+
+		if(!gpioPin) {
+			throw new Error('Could not find exported GPIO pin %d, channel %s.', pin, config.channel);
 		}
 
-		return Q.nfcall(fs.readFile, raspberryPi.getPinGpioValuePath(pin), 'utf-8')
-			.then(function (data) {
-				data = (data.toString()).trim() || '0';
-				return data === '1';
-			});
+		return gpioPin.read();
 	};
 
 	/**
 	 * Unexport any pins setup by this module
-	 *
-	 * @param {function} cb Optional callback
 	 */
 	self.destroy = function (data) {
-		debug('Cleaning up GPIO');
+		gpiodebug('Cleaning up GPIO');
 
 		var commandText = 'gpio unexportall',
-			pinsToUnexport = Object.keys(exportedOutputPins)
-				.concat(Object.keys(exportedInputPins));
+			pinsToUnexport = Object.keys(exportedPins);
 
 		return pinsToUnexport
 			.reduce(function (chain, pin) {
 				return chain
-					.then(function(){ return { pin: pin }; })
-					.then(unexportPin);
+					.then(function () {
+						var gpio = pinsToUnexport[pin];
+
+						return gpio.destroy();
+					});
 			}, exec(commandText, {}))
-		    .then(function(){
+			.then(function () {
 				// allow data pass-through
 				return data;
 			});
@@ -382,19 +416,13 @@ function Gpio() {
 	 * Reset the state of the module
 	 */
 	self.reset = function () {
-		exportedOutputPins = {};
-		exportedInputPins = {};
-		self.removeAllListeners();
-
 		currentMode = self.MODE_RPI;
 
 		return null;
 	};
 
 	// Init
-	EventEmitter.call(self);
-	self.reset();
+	return self.reset();
 }
-util.inherits(Gpio, EventEmitter);
 
-module.exports = new Gpio();
+module.exports = new GpioManager();
