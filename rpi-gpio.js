@@ -3,7 +3,7 @@ var Q = require('q'),
 	exec = Q.denodeify(require('child_process').exec),
 	RaspberryPiVirtualHardware = require('./lib/raspberry-pi-virtual-hardware.js'),
 	GpioPin = require('./lib/gpio-pin.js'),
-	gpiodebug = require('debug')('gpio-manager');
+	debug = require('debug')('gpio:manager');
 
 
 
@@ -21,8 +21,8 @@ function GpioManager(raspberryPiHardware) {
 			throw new Error('Channel ' + config.channel + ' does not map to a GPIO pin');
 		}
 
+		debug('Resolved channel %d to  pin %d', config.channel, pin);
 		config.pin = pin;
-		gpiodebug('set up pin %d', pin);
 
 		return config;
 	}
@@ -36,9 +36,9 @@ function GpioManager(raspberryPiHardware) {
 
 	function createGpioPinMapping(config) {
 		if(!!exportedPins[config.pin]) {
-			throw new Error('The pin %d, channel %s, has already been assigned!', config.pin, config.channel);
+			throw new Error('The pin %d, channel %d, has already been assigned!', config.pin, config.channel);
 		}
-
+		debug('Creating GPIO pin mapping for pin %d, channel %d.', config.pin, config.channel);
 		var gpioPin = new GpioPin(config);
 
 		exportedPins[config.pin] = gpioPin;
@@ -58,6 +58,7 @@ function GpioManager(raspberryPiHardware) {
 	 * Set pin reference mode. Defaults to 'mode_rpi'.
 	 */
 	self.setMode = function (mode) {
+		debug('Changing current mode to %s.', mode);
 		currentMode = mode;
 
 		return currentMode;
@@ -85,7 +86,7 @@ function GpioManager(raspberryPiHardware) {
 			.then(resolvePinFilePath)
 			.then(createGpioPinMapping)
 			.catch(function (err) {
-				gpiodebug('An error occurred during setup.', err.stack);
+				debug('An error occurred during setup.', err.stack);
 				throw err;
 			});
 	};
@@ -98,12 +99,12 @@ function GpioManager(raspberryPiHardware) {
 	 * @param {function} cb      Optional callback
 	 */
 	self.write = self.output = function (config) {
-		gpiodebug('Attempting to write to channel %d a value of %s', config.channel, config.value);
+		debug('Attempting to write to channel %d a value of %s', config.channel, config.value);
 		var pin = raspberryPi.getPinForChannel(config.channel, currentMode),
 			gpioPin = exportedPins[pin];
 
 		if(!gpioPin) {
-			throw new Error('Could not find exported GPIO pin %d, channel %s.', pin, config.channel);
+			throw new Error('Could not find exported GPIO pin %d, channel %d.', pin, config.channel);
 		}
 
 		return gpioPin.write(config.value);
@@ -113,13 +114,13 @@ function GpioManager(raspberryPiHardware) {
 	 * Read a value from a channel
 	 */
 	self.read = self.input = function (config) {
-		gpiodebug('Attempting to read from channel %d', config.channel);
+		debug('Attempting to read from channel %d', config.channel);
 
 		var pin = raspberryPi.getPinForChannel(config.channel, currentMode),
 			gpioPin = exportedPins[pin];
 
 		if(!gpioPin) {
-			throw new Error('Could not find exported GPIO pin %d, channel %s.', pin, config.channel);
+			throw new Error('Could not find exported GPIO pin %d, channel %d.', pin, config.channel);
 		}
 
 		return gpioPin.read();
@@ -129,20 +130,24 @@ function GpioManager(raspberryPiHardware) {
 	 * Unexport any pins setup by this module
 	 */
 	self.destroy = function (data) {
-		gpiodebug('Cleaning up GPIO');
+		debug('Cleaning up GPIO');
 
 		var commandText = 'gpio unexportall',
-			pinsToUnexport = Object.keys(exportedPins);
+			pinsToUnexport = Object.keys(exportedPins)
+				.map(function(pin){
+					var gpioPin = exportedPins[pin];
 
-		return pinsToUnexport
-			.reduce(function (chain, pin) {
-				return chain
-					.then(function () {
-						var gpio = pinsToUnexport[pin];
-
-						return gpio.destroy();
+					return gpioPin.destroy().then(function(){
+						exportedPins[pin] = null;
+						delete exportedPins[pin];
 					});
-			}, exec(commandText, {}))
+				});
+
+		return Q.all(pinsToUnexport)
+			.then(function(){
+				debug('Running "unexportall" as a final cleanup');
+				return exec(commandText, {});
+			})
 			.then(function () {
 				// allow data pass-through
 				return data;
