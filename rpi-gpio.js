@@ -293,7 +293,10 @@ function Gpio() {
     };
 
     function getPinRpi(channel) {
-        return currentPins[channel] + '';
+        var pin = currentPins[channel];
+        if (pin) {
+            return pin + '';
+        }
     };
 
     function getPinBcm(channel) {
