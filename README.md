@@ -10,7 +10,7 @@ Control Raspberry Pi GPIO pins with io.js / node.js
 See this guide on how to get [node.js running on Raspberry Pi](http://joshondesign.com/2013/10/23/noderpi).
 
 This module can then be installed with npm:
-```js
+```
 npm install rpi-gpio
 ```
 
@@ -243,3 +243,15 @@ function delayedWrite(pin, value, callback) {
     }, 500);
 }
 ```
+
+## Contributing
+Contributions are appreciated, both in the form of bug reports and pull requests.
+
+Due to the nature of this project it can be quite time-consuming to test against real hardware, so the automated test suite is all the more important. I will not accept any pull requests that cause the build to fail, and probably will not accept any that do not have corresponding test coverage.
+
+You can run the tests with npm:
+```
+npm test
+```
+
+The tests use [mochajs](http://mochajs.org) to stub and mock out file system calls, and [Sinon.JS](http://sinonjs.org) as the test framework.
