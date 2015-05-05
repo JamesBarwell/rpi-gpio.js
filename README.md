@@ -14,6 +14,8 @@ This module can then be installed with npm:
 npm install rpi-gpio
 ```
 
+You'll also need to install the [GPIO Utility from WiringPi](http://wiringpi.com/download-and-install/).
+
 ## Usage
 Firstly, make make sure you are running your application as root or with sudo, else the Raspberry Pi will not let you output to the GPIO.
 
@@ -48,9 +50,9 @@ Writes the value of a channel.
 Sets the channel addressing schema.
 * mode: Specify either Raspberry Pi or SoC/BCM pin schemas, by passing MODE_RPI or MODE_BCM. Defaults to MODE_RPI.
 
-#### setPollFrequency(value)
-Sets the poll frequency for checking whether pin values have changed.
-* value: The polling frequency in milliseconds, defaults to 5007.
+#### setExportUtility(exportUtility)
+Set Export Utility.
+* exportUtility: Specify the export utility used to export GPIO pins by passing `EXPORT_WIRING_PI_GPIO` or `EXPORT_GPIO_ADMIN`. Defaults to `EXPORT_WIRING_PI_GPIO`.
 
 #### input()
 Alias of read().

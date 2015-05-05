@@ -1,8 +1,8 @@
 {
-  "name": "rpi-gpio",
-  "version": "0.5.1",
+  "name": "gpio-manager",
+  "version": "0.6.0",
   "description": "Control Raspberry Pi GPIO pins with node.js",
-  "main": "rpi-gpio.js",
+  "main": "gpio-manager.js",
   "keywords:": [
     "raspberry",
     "pi",
@@ -12,9 +12,9 @@
     "test": "test"
   },
   "devDependencies": {
+    "istanbul": "~0.2.7",
     "mocha": "~1.18.2",
-    "sinon": "~1.9.0",
-    "istanbul": "~0.2.7"
+    "sinon": "~1.9.0"
   },
   "scripts": {
     "test": "mocha",
@@ -23,13 +23,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/JamesBarwell/rpi-gpio.js.git"
+    "url": "https://github.com/brandonmartinez/rpi-gpio.js.git"
   },
-  "author": "James Barwell <jb@jamesbarwell.co.uk>",
+  "author": "Martinez Media, LLC <contact@martinezmedia.net>",
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
-    "async": "~0.8.0",
-    "debug": "~0.8.1"
+    "debug": "~0.8.1",
+    "epoll": "^0.1.12",
+    "q": "^1.1.2"
   }
 }
