@@ -253,5 +253,9 @@ You can run the tests with npm:
 ```
 npm test
 ```
+and create a coverage report with:
+```
+npm run coverage
+```
 
 The tests use [mochajs](http://mochajs.org) to stub and mock out file system calls, and [Sinon.JS](http://sinonjs.org) as the test framework.
