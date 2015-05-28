@@ -455,6 +455,35 @@ describe('rpi-gpio', function() {
                 });
             });
         });
+
+        context('when pin 7 is setup for output', function() {
+            beforeEach(function(done) {
+                gpio.setup(7, gpio.DIR_OUT, done);
+            });
+
+            context('and pin 7 is on', function() {
+                beforeEach(function() {
+                    fs.readFile.yieldsAsync(null, '1');
+                });
+
+                context('and pin 7 is read', function() {
+                    var callback;
+
+                    beforeEach(function(done) {
+                        callback = sinon.spy(done);
+                        gpio.read(7, callback);
+                    });
+
+                    it('should run the callback with a value boolean true', function() {
+                        var args = fs.readFile.lastCall.args;
+                        assert.equal(args[0], PATH + '/gpio7/value');
+                        sinon.assert.calledWith(callback, null, true);
+                    });
+
+                });
+            });
+        });
+
     });
 
     describe('destroy', function() {
