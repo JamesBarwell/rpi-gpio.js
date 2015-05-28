@@ -219,7 +219,7 @@ function Gpio() {
     this.read = this.input = function(channel, cb /*err,value*/) {
         var pin = getPinForCurrentMode(channel);
 
-        if (!exportedInputPins[pin]) {
+        if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
             return process.nextTick(function() {
                 cb(new Error('Pin has not been exported'));
             });
