@@ -27,10 +27,11 @@ Please note that there are two different and confusing ways to reference a chann
 
 ### Methods
 
-#### setup(channel [, direction], callback)
+#### setup(channel [, direction, edge], callback)
 Sets up a channel for read or write. Must be done before the channel can be used.
 * channel: Reference to the pin in the current mode's schema.
 * direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. Defaults to DIR_OUT.
+* edge: Interrupt generating GPIO chip setting, pass either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'. No interrupts will be generated if set to 'none'
 * callback: Provides Error as the first argument if an error occured.
 
 #### read(channel, callback)
@@ -116,7 +117,7 @@ var gpio = require('rpi-gpio');
 gpio.on('change', function(channel, value) {
 	console.log('Channel ' + channel + ' value is now ' + value);
 });
-gpio.setup(7, gpio.DIR_IN);
+gpio.setup(7, gpio.DIR_IN, 'both');
 ```
 
 ### Unexport pins opened by the module when finished
@@ -157,7 +158,7 @@ var max   = 3;
 gpio.on('change', function(channel, value) {
     console.log('Channel ' + channel + ' value is now ' + value);
 });
-gpio.setup(pin, gpio.DIR_OUT, on);
+gpio.setup(pin, gpio.DIR_OUT, 'both', on);
 
 function on() {
     if (count >= max) {
@@ -193,13 +194,13 @@ gpio.on('change', function(channel, value) {
 
 async.parallel([
     function(callback) {
-        gpio.setup(7, gpio.DIR_OUT, callback)
+        gpio.setup(7, gpio.DIR_OUT, 'both', callback)
     },
     function(callback) {
-        gpio.setup(15, gpio.DIR_OUT, callback)
+        gpio.setup(15, gpio.DIR_OUT, 'both', callback)
     },
     function(callback) {
-        gpio.setup(16, gpio.DIR_OUT, callback)
+        gpio.setup(16, gpio.DIR_OUT, 'both', callback)
     },
 ], function(err, results) {
     console.log('Pins set up');
