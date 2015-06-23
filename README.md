@@ -31,8 +31,12 @@ Please note that there are two different and confusing ways to reference a chann
 Sets up a channel for read or write. Must be done before the channel can be used.
 * channel: Reference to the pin in the current mode's schema.
 * direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. Defaults to DIR_OUT.
-* edge: Interrupt generating GPIO chip setting, pass either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'. No interrupts will be generated if set to 'none'
+* edge: Interrupt generating GPIO chip setting, pass in EDGE_NONE for no interrupts, EDGE_RISING for interrupts on rising values, EDGE_FALLING for interrupts on falling values or EDGE_BOTH for all interrupts.
+Defaults to EDGE_NONE.
 * callback: Provides Error as the first argument if an error occured.
+
+#### listen()
+Start listening for interrupts on all exported channels
 
 #### read(channel, callback)
 Reads the value of a channel.
@@ -48,10 +52,6 @@ Writes the value of a channel.
 #### setMode(mode)
 Sets the channel addressing schema.
 * mode: Specify either Raspberry Pi or SoC/BCM pin schemas, by passing MODE_RPI or MODE_BCM. Defaults to MODE_RPI.
-
-#### setPollFrequency(value)
-Sets the poll frequency for checking whether pin values have changed.
-* value: The polling frequency in milliseconds, defaults to 5007.
 
 #### input()
 Alias of read().
@@ -117,7 +117,9 @@ var gpio = require('rpi-gpio');
 gpio.on('change', function(channel, value) {
 	console.log('Channel ' + channel + ' value is now ' + value);
 });
-gpio.setup(7, gpio.DIR_IN, 'both');
+gpio.setup(7, gpio.DIR_IN, gpio.EDGE_BOTH, function () {
+    gpio.listen();
+});
 ```
 
 ### Unexport pins opened by the module when finished
@@ -158,9 +160,10 @@ var max   = 3;
 gpio.on('change', function(channel, value) {
     console.log('Channel ' + channel + ' value is now ' + value);
 });
-gpio.setup(pin, gpio.DIR_OUT, 'both', on);
+gpio.setup(pin, gpio.DIR_OUT, gpio.EDGE_BOTH, on);
 
 function on() {
+    gpio.listen();
     if (count >= max) {
         gpio.destroy(function() {
             console.log('Closed pins, now exit');
@@ -194,15 +197,16 @@ gpio.on('change', function(channel, value) {
 
 async.parallel([
     function(callback) {
-        gpio.setup(7, gpio.DIR_OUT, 'both', callback)
+        gpio.setup(7, gpio.DIR_OUT, gpio.EDGE_BOTH, callback)
     },
     function(callback) {
-        gpio.setup(15, gpio.DIR_OUT, 'both', callback)
+        gpio.setup(15, gpio.DIR_OUT, gpio.EDGE_BOTH, callback)
     },
     function(callback) {
-        gpio.setup(16, gpio.DIR_OUT, 'both', callback)
+        gpio.setup(16, gpio.DIR_OUT, gpio.EDGE_BOTH, callback)
     },
 ], function(err, results) {
+    gpio.listen();
     console.log('Pins set up');
     write();
 });
