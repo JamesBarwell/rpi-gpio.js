@@ -33,10 +33,18 @@ Sets up a channel for read or write. Must be done before the channel can be used
 * direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. Defaults to DIR_OUT.
 * edge: Interrupt generating GPIO chip setting, pass in EDGE_NONE for no interrupts, EDGE_RISING for interrupts on rising values, EDGE_FALLING for interrupts on falling values or EDGE_BOTH for all interrupts.
 Defaults to EDGE_NONE.
-* callback: Provides Error as the first argument if an error occured.
+* callback: Provides Error as the first argument if an error occurred.
 
-#### listen()
-Start listening for interrupts on all exported channels
+#### listen(channel, callback)
+Start listening for interrupts on the specified channel. Can't listen to the same channel multiple times.
+* channel: Reference to the pin in the current mode's schema.
+* callback: Provides Error as the first argument if an error occurred.
+
+#### stopListening(channel [, pin], callback)
+Stop listening for interrupts on the specified channel.
+* channel: Reference to the pin in the current mode's schema.
+* pin: Directly reference the pin in the current schema. Used internally, optional.
+* callback: Provides Error as the first argument if an error occurred.
 
 #### read(channel, callback)
 Reads the value of a channel.
@@ -117,8 +125,23 @@ var gpio = require('rpi-gpio');
 gpio.on('change', function(channel, value) {
 	console.log('Channel ' + channel + ' value is now ' + value);
 });
-gpio.setup(7, gpio.DIR_IN, gpio.EDGE_BOTH, function () {
-    gpio.listen();
+gpio.setup(7, gpio.DIR_IN, gpio.EDGE_BOTH);
+```
+
+### Stop listen for changes on a pin
+
+```js
+var gpio = require('rpi-gpio');
+
+gpio.on('change', function(channel, value) {
+	console.log('Channel ' + channel + ' value is now ' + value);
+});
+gpio.setup(7, gpio.DIR_IN, gpio.EDGE_BOTH);
+
+setTimeout(function () {
+    gpio.stopListening(7, function () {
+        console.log('No longer listening to channel 7');
+    });
 });
 ```
 
@@ -141,7 +164,6 @@ function pause() {
 function closePins() {
     gpio.destroy(function() {
         console.log('All pins unexported');
-        return process.exit(0);
     });
 }
 ```
@@ -163,11 +185,9 @@ gpio.on('change', function(channel, value) {
 gpio.setup(pin, gpio.DIR_OUT, gpio.EDGE_BOTH, on);
 
 function on() {
-    gpio.listen();
     if (count >= max) {
         gpio.destroy(function() {
             console.log('Closed pins, now exit');
-            return process.exit(0);
         });
         return;
     }
@@ -206,7 +226,6 @@ async.parallel([
         gpio.setup(16, gpio.DIR_OUT, gpio.EDGE_BOTH, callback)
     },
 ], function(err, results) {
-    gpio.listen();
     console.log('Pins set up');
     write();
 });
@@ -236,7 +255,6 @@ function write() {
         setTimeout(function() {
             gpio.destroy(function() {
                 console.log('Closed pins, now exit');
-                return process.exit(0);
             });
         }, 500);
     });
