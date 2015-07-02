@@ -20,7 +20,9 @@ function getCpuInfo(revision) {
 
 function stubEpoll() {
     epoll = {
-        add: sinon.stub()
+        add: sinon.stub(),
+        remove: sinon.stub().returnsThis(),
+        close: sinon.stub()
     }
 }
 
