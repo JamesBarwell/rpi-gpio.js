@@ -2,6 +2,13 @@ var assert = require('assert');
 var fs     = require('fs');
 var mocha  = require('mocha');
 var sinon  = require('sinon');
+
+// Stub epoll module
+epoll = {}
+require('epoll').Epoll = function() {
+    return epoll;
+}
+
 var gpio   = require('../rpi-gpio.js');
 
 var PATH = '/sys/class/gpio';
@@ -11,11 +18,19 @@ function getCpuInfo(revision) {
     return 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : ' + revision + '\nSerial   : 000000009a5d9c22';
 }
 
+function stubEpoll() {
+    epoll = {
+        add: sinon.stub()
+    }
+}
+
 describe('rpi-gpio', function() {
 
     before(function() {
         sinon.stub(fs, 'writeFile').yieldsAsync();
         sinon.stub(fs, 'exists').yieldsAsync(false);
+        sinon.stub(fs, 'openSync').returns(1)
+        sinon.stub(fs, 'readSync')
         sinon.stub(fs, 'readFile')
             .withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo());
     });
@@ -28,6 +43,8 @@ describe('rpi-gpio', function() {
         fs.writeFile.reset();
         fs.exists.reset();
         fs.readFile.reset();
+
+        stubEpoll()
     });
 
     describe('setMode()', function() {
