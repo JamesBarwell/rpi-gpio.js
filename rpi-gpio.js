@@ -342,6 +342,7 @@ function Gpio() {
 
         currentPins = undefined;
         getPinForCurrentMode = getPinRpi;
+        POLLERS = []
     };
 
     // Init
