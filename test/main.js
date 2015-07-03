@@ -6,10 +6,15 @@ var sinon  = require('sinon');
 // Stub epoll module
 epoll = {}
 require('epoll').Epoll = function() {
-    return epoll;
+    return {
+        add: sinon.stub(),
+        remove: sinon.stub().returnsThis(),
+        close: sinon.stub()
+    }
 }
 
-var gpio   = require('../rpi-gpio.js');
+// Only load module after Epoll is stubbed
+var gpio = require('../rpi-gpio.js');
 
 var PATH = '/sys/class/gpio';
 
@@ -19,34 +24,31 @@ function getCpuInfo(revision) {
 }
 
 function stubEpoll() {
-    epoll = {
-        add: sinon.stub(),
-        remove: sinon.stub().returnsThis(),
-        close: sinon.stub()
-    }
 }
 
 describe('rpi-gpio', function() {
 
-    before(function() {
-        sinon.stub(fs, 'writeFile').yieldsAsync();
-        sinon.stub(fs, 'exists').yieldsAsync(false);
-        sinon.stub(fs, 'openSync').returns(1)
-        sinon.stub(fs, 'readSync')
-        sinon.stub(fs, 'readFile')
-            .withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo());
-    });
+    var sandbox;
 
     beforeEach(function() {
+        sandbox = sinon.sandbox.create()
+
+        sandbox.stub(fs, 'writeFile').yieldsAsync();
+        sandbox.stub(fs, 'exists').yieldsAsync(false);
+        sandbox.stub(fs, 'openSync').returns(1)
+        sandbox.stub(fs, 'readSync')
+        sandbox.stub(fs, 'readFile')
+            .withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo());
+
         gpio.reset();
         gpio.setMode(gpio.MODE_BCM);
         gpio.version = 1;
 
-        fs.writeFile.reset();
-        fs.exists.reset();
-        fs.readFile.reset();
-
         stubEpoll()
+    });
+
+    afterEach(function() {
+        sandbox.restore()
     });
 
     describe('setMode()', function() {
