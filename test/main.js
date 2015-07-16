@@ -23,9 +23,6 @@ function getCpuInfo(revision) {
     return 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : ' + revision + '\nSerial   : 000000009a5d9c22';
 }
 
-function stubEpoll() {
-}
-
 describe('rpi-gpio', function() {
 
     var sandbox;
@@ -43,8 +40,6 @@ describe('rpi-gpio', function() {
         gpio.reset();
         gpio.setMode(gpio.MODE_BCM);
         gpio.version = 1;
-
-        stubEpoll()
     });
 
     afterEach(function() {
