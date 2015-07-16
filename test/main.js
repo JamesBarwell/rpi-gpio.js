@@ -3,13 +3,15 @@ var fs     = require('fs');
 var mocha  = require('mocha');
 var sinon  = require('sinon');
 
+var sandbox;
+
 // Stub epoll module
 epoll = {}
 require('epoll').Epoll = function() {
     return {
-        add: sinon.stub(),
-        remove: sinon.stub().returnsThis(),
-        close: sinon.stub()
+        add: sandbox.stub(),
+        remove: sandbox.stub().returnsThis(),
+        close: sandbox.stub()
     }
 }
 
@@ -24,8 +26,6 @@ function getCpuInfo(revision) {
 }
 
 describe('rpi-gpio', function() {
-
-    var sandbox;
 
     beforeEach(function() {
         sandbox = sinon.sandbox.create()
@@ -51,7 +51,7 @@ describe('rpi-gpio', function() {
             var listener;
 
             beforeEach(function() {
-                listener = sinon.spy();
+                listener = sandbox.spy();
                 gpio.on('modeChange', listener);
 
                 gpio.setMode(gpio.MODE_RPI);
@@ -67,7 +67,7 @@ describe('rpi-gpio', function() {
             var listener;
 
             beforeEach(function() {
-                listener = sinon.spy();
+                listener = sandbox.spy();
                 gpio.on('modeChange', listener);
 
                 gpio.setMode(gpio.MODE_BCM);
@@ -99,7 +99,7 @@ describe('rpi-gpio', function() {
             var callback;
 
             beforeEach(function(done) {
-                callback = sinon.spy(onSetupComplete);
+                callback = sandbox.spy(onSetupComplete);
                 function onSetupComplete() {
                     done();
                 }
@@ -117,7 +117,7 @@ describe('rpi-gpio', function() {
             var callback;
 
             beforeEach(function(done) {
-                callback = sinon.spy(onSetupComplete);
+                callback = sandbox.spy(onSetupComplete);
                 function onSetupComplete() {
                     done();
                 }
@@ -135,7 +135,7 @@ describe('rpi-gpio', function() {
             var callback;
 
             beforeEach(function(done) {
-                callback = sinon.spy(onSetupComplete);
+                callback = sandbox.spy(onSetupComplete);
                 function onSetupComplete() {
                     done();
                 }
@@ -180,10 +180,10 @@ describe('rpi-gpio', function() {
                 var listener;
 
                 beforeEach(function(done) {
-                    listener = sinon.spy();
+                    listener = sandbox.spy();
                     gpio.on('export', listener);
 
-                    onSetup = sinon.spy(done);
+                    onSetup = sandbox.spy(done);
                     gpio.setup(7, null, onSetup);
                 });
 
@@ -249,7 +249,7 @@ describe('rpi-gpio', function() {
                 var callback;
 
                 beforeEach(function(done) {
-                    callback = sinon.spy(done);
+                    callback = sandbox.spy(done);
                     gpio.setup(7, callback);
                 });
 
@@ -267,7 +267,7 @@ describe('rpi-gpio', function() {
             var onSetup;
 
             beforeEach(function(done) {
-                onSetup = sinon.spy(done);
+                onSetup = sandbox.spy(done);
                 gpio.setup(7, gpio.DIR_OUT, onSetup);
             });
 
@@ -347,7 +347,7 @@ describe('rpi-gpio', function() {
                     function write() {
                         done();
                     }
-                    onWrite = sinon.spy(write);
+                    onWrite = sandbox.spy(write);
                     gpio.write(3, true, onWrite);
                 });
 
@@ -363,7 +363,7 @@ describe('rpi-gpio', function() {
             var onWrite;
 
             beforeEach(function(done) {
-                onSetup = sinon.spy(done);
+                onSetup = sandbox.spy(done);
                 gpio.setup(7, gpio.DIR_IN, onSetup);
             });
 
@@ -372,7 +372,7 @@ describe('rpi-gpio', function() {
                     var callback = function() {
                         done();
                     };
-                    onWrite = sinon.spy(callback);
+                    onWrite = sandbox.spy(callback);
                     gpio.write(7, true, onWrite);
                 });
 
@@ -401,7 +401,7 @@ describe('rpi-gpio', function() {
                     var callback;
 
                     beforeEach(function(done) {
-                        callback = sinon.spy(done);
+                        callback = sandbox.spy(done);
                         gpio.read(7, callback);
                     });
 
@@ -423,7 +423,7 @@ describe('rpi-gpio', function() {
                     var callback;
 
                     beforeEach(function(done) {
-                        callback = sinon.spy(done);
+                        callback = sandbox.spy(done);
                         gpio.read(7, callback);
                     });
 
@@ -443,7 +443,7 @@ describe('rpi-gpio', function() {
                     function onRead() {
                         done();
                     }
-                    callback = sinon.spy(onRead);
+                    callback = sandbox.spy(onRead);
                     gpio.read(3, callback);
                 });
 
@@ -468,7 +468,7 @@ describe('rpi-gpio', function() {
                     var callback;
 
                     beforeEach(function(done) {
-                        callback = sinon.spy(done);
+                        callback = sandbox.spy(done);
                         gpio.read(7, callback);
                     });
 
@@ -527,7 +527,7 @@ describe('rpi-gpio', function() {
             beforeEach(function(done) {
                 // Remove previous stub so that we can control when watchFile triggers
 
-                listener = sinon.spy();
+                listener = sandbox.spy();
                 gpio.on('change', listener);
 
                 gpio.setup(7, gpio.DIR_IN, done);
