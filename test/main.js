@@ -547,7 +547,7 @@ describe('rpi-gpio', function() {
 
             context('and stopListening is called with pin 7', function() {
                 beforeEach(function(done) {
-                    gpio.stopListening(7, null, done);
+                    gpio.stopListening(7, done);
                 });
 
                 it('should stop listening to pin 7', function() {

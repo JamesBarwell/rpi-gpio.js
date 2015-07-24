@@ -40,10 +40,9 @@ Start listening for interrupts on the specified channel. Can't listen to the sam
 * channel: Reference to the pin in the current mode's schema.
 * callback: Provides Error as the first argument if an error occurred.
 
-#### stopListening(channel [, pin], callback)
+#### stopListening(channel, callback)
 Stop listening for interrupts on the specified channel.
 * channel: Reference to the pin in the current mode's schema.
-* pin: Directly reference the pin in the current schema. Used internally, optional.
 * callback: Provides Error as the first argument if an error occurred.
 
 #### read(channel, callback)

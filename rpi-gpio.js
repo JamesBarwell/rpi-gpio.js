@@ -284,17 +284,10 @@ function Gpio() {
      * Stop listening for interrupts on a channel
      *
      * @param {number}      channel The channel to stop watching
-     * @param {number}      pin Directly specify the mapped pin
      * @param {function}    cb Callback which receives the channel's err
      */
-    this.stopListening = function(channel, pin, cb /*err*/) {
-
-        if (arguments.length === 2 && typeof pin == 'function') {
-            cb = pin;
-            pin = getPinForCurrentMode(channel)
-        }
-
-        pin = pin || getPinForCurrentMode(channel);
+    this.stopListening = function(channel, cb /*err*/) {
+        pin = getPinForCurrentMode(channel);
         cb = cb || function() {};
 
         if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
@@ -303,13 +296,7 @@ function Gpio() {
             });
         }
 
-        POLLERS.forEach(function(map, index) {
-            if (map.pin == pin) {
-                map.poller.remove(map.fd).close();
-                POLLERS.splice(index, 1);
-                return cb(null);
-            }
-        });
+        removeListener(pin, cb)
     };
 
     /**
@@ -323,7 +310,7 @@ function Gpio() {
             .concat(Object.keys(exportedInputPins))
             .map(function(pin) {
                 return function(done) {
-                    _this.stopListening(null, pin);
+                    removeListener(pin, function() { })
                     unexportPin(pin, done);
                 }
             });
@@ -460,6 +447,16 @@ function createListener(channel, pin, cb) {
     clearInterrupt(fd);
     poller.add(fd, Epoll.EPOLLPRI);
     POLLERS.push({pin: pin, poller: poller, fd: fd});
+}
+
+function removeListener(pin, cb) {
+    POLLERS.forEach(function(map, index) {
+        if (map.pin == pin) {
+            map.poller.remove(map.fd).close();
+            POLLERS.splice(index, 1);
+            return cb(null);
+        }
+    });
 }
 
 function clearInterrupt(fd) {
