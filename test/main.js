@@ -10,7 +10,9 @@ var listeners = []
 
 // Stub epoll module
 epoll = {}
-require('epoll').Epoll = function() {
+require('epoll').Epoll = function(callback) {
+    callback(null, 'fakeFd2')
+
     var listener = {
         add: sandbox.spy(),
         remove: sandbox.stub().returnsThis(),
@@ -231,6 +233,10 @@ describe('rpi-gpio', function() {
 
                     var listener = listeners[0]
                     sinon.assert.calledWith(listener.add, 'fakeFd')
+                });
+
+                it('should clear the interupt twice', function() {
+                    sinon.assert.calledTwice(fs.readSync)
                 });
             });
 
