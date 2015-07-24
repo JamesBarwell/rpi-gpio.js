@@ -503,6 +503,43 @@ describe('rpi-gpio', function() {
 
     });
 
+    describe('stopListening', function() {
+        context('when pin 7 is setup for input', function() {
+            beforeEach(function(done) {
+                gpio.setup(7, gpio.DIR_IN, done);
+            });
+
+            context('and stopListening is called with pin 7', function() {
+                beforeEach(function(done) {
+                    gpio.stopListening(7, null, done);
+                });
+
+                it('should stop listening to pin 7', function() {
+                    var listener = listeners[0]
+                    sinon.assert.calledOnce(listener.remove)
+                    sinon.assert.calledWith(listener.remove, 'fakeFd')
+                });
+            });
+        });
+
+        context('when stopListening is called on a non-exported pin', function() {
+            var onStopListening
+
+            beforeEach(function(done) {
+                var callback = function() {
+                    done();
+                };
+                onStopListening = sandbox.spy(callback);
+                gpio.stopListening(7, onStopListening);
+            });
+
+            it('should run the callback with an error', function() {
+                sinon.assert.calledOnce(onStopListening);
+                assert.ok(onStopListening.getCall(0).args[0]);
+            });
+        });
+    });
+
     describe('destroy', function() {
         context('when pins 7, 8 and 10 have been exported', function() {
             var unexportPath = PATH + '/unexport';
