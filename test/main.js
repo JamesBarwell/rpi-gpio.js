@@ -5,14 +5,19 @@ var sinon  = require('sinon');
 
 var sandbox;
 
+// Store current listeners
+var listeners = []
+
 // Stub epoll module
 epoll = {}
 require('epoll').Epoll = function() {
-    return {
-        add: sandbox.stub(),
+    var listener = {
+        add: sandbox.spy(),
         remove: sandbox.stub().returnsThis(),
         close: sandbox.stub()
     }
+    listeners.push(listener)
+    return listener
 }
 
 // Only load module after Epoll is stubbed
@@ -32,7 +37,7 @@ describe('rpi-gpio', function() {
 
         sandbox.stub(fs, 'writeFile').yieldsAsync();
         sandbox.stub(fs, 'exists').yieldsAsync(false);
-        sandbox.stub(fs, 'openSync').returns(1)
+        sandbox.stub(fs, 'openSync').returns('fakeFd')
         sandbox.stub(fs, 'readSync')
         sandbox.stub(fs, 'readFile')
             .withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo());
@@ -44,6 +49,7 @@ describe('rpi-gpio', function() {
 
     afterEach(function() {
         sandbox.restore()
+        listeners = []
     });
 
     describe('setMode()', function() {
@@ -218,6 +224,13 @@ describe('rpi-gpio', function() {
                     var args2 = fs.writeFile.getCall(2).args;
                     assert.equal(args2[0], PATH + '/gpio7/direction');
                     assert.equal(args2[1], 'out');
+                });
+
+                it('should set up a listener', function() {
+                    assert.equal(listeners.length, 1)
+
+                    var listener = listeners[0]
+                    sinon.assert.calledWith(listener.add, 'fakeFd')
                 });
             });
 
@@ -493,27 +506,56 @@ describe('rpi-gpio', function() {
                 [7, 8, 10].forEach(function(pin) {
                     gpio.setup(pin, gpio.DIR_IN, function() {
                         if (--i === 0) {
-                            onSetupComplete();
+                            done()
                         }
                     });
                 });
+            });
 
-                function onSetupComplete() {
+            it('should have created 3 listeners', function() {
+                assert.equal(listeners.length, 3)
+            });
+
+            context('and destroy() is run', function() {
+
+                beforeEach(function(done) {
                     fs.writeFile.reset();
                     gpio.destroy(done);
-                }
-            });
+                })
 
-            it('should unexport pin 7', function() {
-                sinon.assert.calledWith(fs.writeFile, unexportPath, '7');
-            });
+                it('should unexport pin 7', function() {
+                    sinon.assert.calledWith(fs.writeFile, unexportPath, '7');
+                });
 
-            it('should unexport pin 8', function() {
-                sinon.assert.calledWith(fs.writeFile, unexportPath, '8');
-            });
+                it('should unexport pin 8', function() {
+                    sinon.assert.calledWith(fs.writeFile, unexportPath, '8');
+                });
 
-            it('should unexport pin 10', function() {
-                sinon.assert.calledWith(fs.writeFile, unexportPath, '10');
+                it('should unexport pin 10', function() {
+                    sinon.assert.calledWith(fs.writeFile, unexportPath, '10');
+                });
+
+                it('should unwatch pin 7', function() {
+                    var listener = listeners[0]
+                    sinon.assert.calledOnce(listener.remove)
+                    sinon.assert.calledWith(listener.remove, 'fakeFd')
+                    sinon.assert.calledOnce(listener.close)
+                });
+
+                it('should unwatch pin 8', function() {
+                    var listener = listeners[1]
+                    sinon.assert.calledOnce(listener.remove)
+                    sinon.assert.calledWith(listener.remove, 'fakeFd')
+                    sinon.assert.calledOnce(listener.close)
+                });
+
+                it('should unwatch pin 9', function() {
+                    var listener = listeners[2]
+                    sinon.assert.calledOnce(listener.remove)
+                    sinon.assert.calledWith(listener.remove, 'fakeFd')
+                    sinon.assert.calledOnce(listener.close)
+                });
+
             });
 
         });
