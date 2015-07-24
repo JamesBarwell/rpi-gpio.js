@@ -157,6 +157,24 @@ describe('rpi-gpio', function() {
             });
         });
 
+        context('when given an invalid edge', function() {
+            var callback;
+
+            beforeEach(function(done) {
+                callback = sandbox.spy(onSetupComplete);
+                function onSetupComplete() {
+                    done();
+                }
+
+                gpio.setup(7, gpio.DIR_IN, 'foo', callback);
+            });
+
+            it('should run the callback with an error', function() {
+                sinon.assert.calledOnce(callback);
+                assert.ok(callback.getCall(0).args[0]);
+            });
+        });
+
         context('when the channel is already exported', function() {
             beforeEach(function(done) {
                 fs.exists.yieldsAsync(true);
@@ -261,6 +279,24 @@ describe('rpi-gpio', function() {
                     var args = fs.writeFile.lastCall.args;
                     assert.equal(args[0], PATH + '/gpio7/direction');
                     assert.equal(args[1], 'out');
+                });
+            });
+
+            var edge_modes = ['none', 'rising', 'falling', 'both']
+            edge_modes.forEach(function(edge_mode) {
+                var edgeConstant = 'EDGE_' + edge_mode.toUpperCase()
+                context('and the edge is specified as ' + edge_mode, function() {
+                    beforeEach(function(done) {
+                        gpio.setup(7, gpio.DIR_OUT, gpio[edgeConstant], done);
+                    });
+
+                    it('should set the channel edge to ' + edge_mode, function() {
+                        sinon.assert.called(fs.writeFile);
+
+                        var args1 = fs.writeFile.getCall(1).args;
+                        assert.equal(args1[0], PATH + '/gpio7/edge');
+                        assert.equal(args1[1], edge_mode);
+                    });
                 });
             });
 
