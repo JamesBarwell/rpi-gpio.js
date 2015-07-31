@@ -370,7 +370,20 @@ function Gpio() {
             throw new Error('Channel %d has not been exported', channel);
         }
 
-        createListener(channel, pin, pollers, onChange);
+        debug('listen for pin %d', pin);
+        var poller = new Epoll(function(err, innerfd, events) {
+            if (err) throw err
+            clearInterrupt(innerfd);
+            onChange(channel);
+        });
+
+        var fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
+        clearInterrupt(fd);
+        poller.add(fd, Epoll.EPOLLPRI);
+        // Append ready-to-use remove function
+        pollers[pin] = function() {
+            poller.remove(fd).close();
+        }
     };
 }
 util.inherits(Gpio, EventEmitter);
@@ -407,23 +420,6 @@ function isExported(pin, cb) {
     fs.exists(PATH + '/gpio' + pin, function(exists) {
         return cb(null, exists);
     });
-}
-
-function createListener(channel, pin, pollers, onChange) {
-    debug('listen for pin %d', pin);
-    var poller = new Epoll(function(err, innerfd, events) {
-        if (err) throw err
-        clearInterrupt(innerfd);
-        onChange(channel);
-    });
-
-    var fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
-    clearInterrupt(fd);
-    poller.add(fd, Epoll.EPOLLPRI);
-    // Append ready-to-use remove function
-    pollers[pin] = function() {
-        poller.remove(fd).close();
-    }
 }
 
 function removeListener(pin, pollers) {
