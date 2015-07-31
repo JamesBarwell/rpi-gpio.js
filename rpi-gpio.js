@@ -86,7 +86,7 @@ function Gpio() {
     var exportedInputPins = {};
     var exportedOutputPins = {};
     var getPinForCurrentMode = getPinRpi;
-    var pollers = [];
+    var pollers = {};
 
     this.DIR_IN   = 'in';
     this.DIR_OUT  = 'out';
@@ -281,7 +281,7 @@ function Gpio() {
 
         currentPins = undefined;
         getPinForCurrentMode = getPinRpi;
-        pollers = []
+        pollers = {}
     };
 
     // Init
@@ -414,20 +414,19 @@ function createListener(channel, pin, pollers, onChange) {
     var fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
     clearInterrupt(fd);
     poller.add(fd, Epoll.EPOLLPRI);
-    pollers.push({
-        pin: pin,
+    pollers[pin] = {
         poller: poller,
         fd: fd
-    });
+    };
 }
 
 function removeListener(pin, pollers) {
-    pollers.forEach(function(map, index) {
-        if (map.pin == pin) {
-            map.poller.remove(map.fd).close();
-            pollers.splice(index, 1);
-        }
-    });
+    if (!pollers[pin]) {
+        return
+    }
+    data = pollers[pin]
+    data.poller.remove(data.fd).close();
+    delete pollers[pin]
 }
 
 function clearInterrupt(fd) {
