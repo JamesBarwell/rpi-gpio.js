@@ -149,7 +149,12 @@ function Gpio() {
             });
         }
 
-        if (edge !== this.EDGE_NONE && edge !== this.EDGE_RISING && edge !== this.EDGE_FALLING && edge !== this.EDGE_BOTH) {
+        if ([
+            this.EDGE_NONE,
+            this.EDGE_RISING,
+            this.EDGE_FALLING,
+            this.EDGE_BOTH
+        ].indexOf(edge) == -1) {
             return process.nextTick(function() {
                 onSetup(new Error('Cannot set invalid edge'));
             });
