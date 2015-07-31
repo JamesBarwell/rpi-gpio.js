@@ -190,7 +190,16 @@ function Gpio() {
                 setDirection(pinForSetup, direction, next);
             }.bind(this),
             function(next) {
-                this.listen(channel, next);
+                listen(channel, function(readChannel) {
+                    this.read(readChannel, function(err, value) {
+                        debug(
+                            'failed to read value after a change on channel %d',
+                            readChannel
+                        );
+                        this.emit('change', readChannel, value);
+                    });
+                }.bind(this));
+                next()
             }.bind(this)
         ], onSetup);
     };
@@ -241,62 +250,6 @@ function Gpio() {
             data = (data + '').trim() || '0';
             return cb(err, data === '1');
         });
-    };
-
-    /**
-     * Listen for interrupts on a channel
-     *
-     * @param {number}      channel The channel to watch
-     * @param {function}    cb Callback which receives the channel's err
-     */
-    this.listen = function(channel, cb /*err*/) {
-
-        var _this = this;
-        var pin = getPinForCurrentMode(channel);
-        if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
-            return process.nextTick(function() {
-                cb(new Error('Pin has not been exported'));
-            });
-        }
-
-        POLLERS.forEach(function(map) {
-            if (map.pin == pin) {
-                return process.nextTick(function() {
-                    cb(new Error('Already watching that pin!'));
-                });
-            }
-        });
-
-        createListener(channel, pin, function(readChannel) {
-
-            _this.read(readChannel, function(err, value) {
-                debug(
-                    'failed to read value after a change on channel %d',
-                    readChannel
-                );
-                _this.emit('change', readChannel, value);
-            });
-        });
-        return cb(null)
-    };
-
-    /**
-     * Stop listening for interrupts on a channel
-     *
-     * @param {number}      channel The channel to stop watching
-     * @param {function}    cb Callback which receives the channel's err
-     */
-    this.stopListening = function(channel, cb /*err*/) {
-        pin = getPinForCurrentMode(channel);
-        cb = cb || function() {};
-
-        if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
-            return process.nextTick(function() {
-                cb(new Error('Pin has not been exported'));
-            });
-        }
-
-        removeListener(pin, cb)
     };
 
     /**
@@ -396,6 +349,28 @@ function Gpio() {
             38,
             40
         ].indexOf(channel) !== -1 ? (channel + '') : null;
+    };
+
+    /**
+     * Listen for interrupts on a channel
+     *
+     * @param {number}      channel The channel to watch
+     * @param {function}    cb Callback which receives the channel's err
+     */
+    function listen(channel, onChange) {
+        var pin = getPinForCurrentMode(channel);
+
+        if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
+            throw new Error('Pin has not been exported');
+        }
+
+        POLLERS.forEach(function(map) {
+            if (map.pin == pin) {
+                throw new Error('Already watching that pin!');
+            }
+        });
+
+        createListener(channel, pin, onChange);
     };
 }
 util.inherits(Gpio, EventEmitter);
