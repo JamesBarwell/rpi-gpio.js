@@ -134,11 +134,12 @@ function Gpio() {
             edge = this.EDGE_NONE;
         }
 
+        channel = parseInt(channel)
         direction = direction || this.DIR_OUT;
         edge = edge || this.EDGE_NONE;
         onSetup = onSetup || function() {};
 
-        if (!channel) {
+        if (typeof channel !== 'number') {
             return process.nextTick(function() {
                 onSetup(new Error('Channel must be a number'));
             });
