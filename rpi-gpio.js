@@ -6,7 +6,7 @@ var debug        = require('debug')('rpi-gpio');
 var Epoll        = require('epoll').Epoll;
 
 var PATH = '/sys/class/gpio';
-var POLLERS = [];
+var pollers = [];
 var PINS = {
     v1: {
         // 1: 3.3v
@@ -263,7 +263,7 @@ function Gpio() {
             .concat(Object.keys(exportedInputPins))
             .map(function(pin) {
                 return function(done) {
-                    removeListener(pin, function() { })
+                    removeListener(pin)
                     unexportPin(pin, done);
                 }
             });
@@ -281,7 +281,7 @@ function Gpio() {
 
         currentPins = undefined;
         getPinForCurrentMode = getPinRpi;
-        POLLERS = []
+        pollers = []
     };
 
     // Init
@@ -361,14 +361,14 @@ function Gpio() {
         var pin = getPinForCurrentMode(channel);
 
         if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
-            throw new Error('Pin has not been exported');
+            throw new Error('Channel %d has not been exported', channel);
         }
 
-        POLLERS.forEach(function(map) {
-            if (map.pin == pin) {
-                throw new Error('Already watching that pin!');
-            }
-        });
+        if (pollers.some(function(map) {
+            return map.pin == pin
+        })) {
+            throw new Error('Already watching channel %d', channel);
+        }
 
         createListener(channel, pin, onChange);
     };
@@ -409,27 +409,29 @@ function isExported(pin, cb) {
     });
 }
 
-function createListener(channel, pin, cb) {
+function createListener(channel, pin, onChange) {
     debug('listen for pin %d', pin);
-    var fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
-
-    var poller = new Epoll(function(err, fd, events) {
-
-        clearInterrupt(fd);
-        cb(channel);
+    var poller = new Epoll(function(err, innerfd, events) {
+        if (err) throw err
+        clearInterrupt(innerfd);
+        onChange(channel);
     });
 
+    var fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
     clearInterrupt(fd);
     poller.add(fd, Epoll.EPOLLPRI);
-    POLLERS.push({pin: pin, poller: poller, fd: fd});
+    pollers.push({
+        pin: pin,
+        poller: poller,
+        fd: fd
+    });
 }
 
-function removeListener(pin, cb) {
-    POLLERS.forEach(function(map, index) {
+function removeListener(pin) {
+    pollers.forEach(function(map, index) {
         if (map.pin == pin) {
             map.poller.remove(map.fd).close();
-            POLLERS.splice(index, 1);
-            return cb(null);
+            pollers.splice(index, 1);
         }
     });
 }
