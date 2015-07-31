@@ -90,6 +90,7 @@ function Gpio() {
 
     this.DIR_IN   = 'in';
     this.DIR_OUT  = 'out';
+
     this.MODE_RPI = 'mode_rpi';
     this.MODE_BCM = 'mode_bcm';
 
@@ -221,22 +222,16 @@ function Gpio() {
      */
     this.write = this.output = function(channel, value, cb /*err*/) {
         var pin = getPinForCurrentMode(channel);
+        cb = cb || function() {}
 
         if (!exportedOutputPins[pin]) {
-            var message;
-            if (exportedInputPins[pin]) {
-                message = 'Pin has been exported for input so cannot be written to';
-            } else {
-                message = 'Pin has not been exported';
-            }
-
             return process.nextTick(function() {
-                cb(new Error(message));
+                cb(new Error('Pin has not been exported for write'));
             });
         }
 
         value = (!!value && value !== '0') ? '1' : '0';
-        fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb || function() {});
+        fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb);
     };
 
     /**
