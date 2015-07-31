@@ -414,18 +414,18 @@ function createListener(channel, pin, pollers, onChange) {
     var fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
     clearInterrupt(fd);
     poller.add(fd, Epoll.EPOLLPRI);
-    pollers[pin] = {
-        poller: poller,
-        fd: fd
-    };
+    // Append ready-to-use remove function
+    pollers[pin] = function() {
+        poller.remove(fd).close();
+    }
 }
 
 function removeListener(pin, pollers) {
     if (!pollers[pin]) {
         return
     }
-    data = pollers[pin]
-    data.poller.remove(data.fd).close();
+    debug('remove listener for pin %d', pin)
+    pollers[pin]()
     delete pollers[pin]
 }
 
