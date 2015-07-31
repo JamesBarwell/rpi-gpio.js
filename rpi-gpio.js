@@ -192,10 +192,13 @@ function Gpio() {
             function(next) {
                 listen(channel, function(readChannel) {
                     this.read(readChannel, function(err, value) {
-                        debug(
-                            'failed to read value after a change on channel %d',
-                            readChannel
-                        );
+                        if (err) {
+                            debug(
+                                'Error reading channel value after change, %d',
+                                readChannel
+                            );
+                            return
+                        }
                         this.emit('change', readChannel, value);
                     });
                 }.bind(this));
