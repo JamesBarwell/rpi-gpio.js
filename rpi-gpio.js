@@ -241,6 +241,10 @@ function Gpio() {
      * @param {function} cb      Callback which receives the channel's boolean value
      */
     this.read = this.input = function(channel, cb /*err,value*/) {
+        if (typeof cb !== 'function') {
+            throw new Error('A callback must be provided')
+        }
+
         var pin = getPinForCurrentMode(channel);
 
         if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
@@ -250,8 +254,11 @@ function Gpio() {
         }
 
         fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
+            if (err) {
+                return cb(err)
+            }
             data = (data + '').trim() || '0';
-            return cb(err, data === '1');
+            return cb(null, data === '1');
         });
     };
 
