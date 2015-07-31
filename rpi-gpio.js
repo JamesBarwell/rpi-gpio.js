@@ -265,7 +265,6 @@ function Gpio() {
      * @param {function} cb Optional callback
      */
     this.destroy = function(cb) {
-        var _this = this;
         var tasks = Object.keys(exportedOutputPins)
             .concat(Object.keys(exportedInputPins))
             .map(function(pin) {
