@@ -6,7 +6,6 @@ var debug        = require('debug')('rpi-gpio');
 var Epoll        = require('epoll').Epoll;
 
 var PATH = '/sys/class/gpio';
-var pollers = [];
 var PINS = {
     v1: {
         // 1: 3.3v
@@ -87,6 +86,7 @@ function Gpio() {
     var exportedInputPins = {};
     var exportedOutputPins = {};
     var getPinForCurrentMode = getPinRpi;
+    var pollers = [];
 
     this.DIR_IN   = 'in';
     this.DIR_OUT  = 'out';
@@ -263,7 +263,7 @@ function Gpio() {
             .concat(Object.keys(exportedInputPins))
             .map(function(pin) {
                 return function(done) {
-                    removeListener(pin)
+                    removeListener(pin, pollers)
                     unexportPin(pin, done);
                 }
             });
@@ -364,13 +364,7 @@ function Gpio() {
             throw new Error('Channel %d has not been exported', channel);
         }
 
-        if (pollers.some(function(map) {
-            return map.pin == pin
-        })) {
-            throw new Error('Already watching channel %d', channel);
-        }
-
-        createListener(channel, pin, onChange);
+        createListener(channel, pin, pollers, onChange);
     };
 }
 util.inherits(Gpio, EventEmitter);
@@ -409,7 +403,7 @@ function isExported(pin, cb) {
     });
 }
 
-function createListener(channel, pin, onChange) {
+function createListener(channel, pin, pollers, onChange) {
     debug('listen for pin %d', pin);
     var poller = new Epoll(function(err, innerfd, events) {
         if (err) throw err
@@ -427,7 +421,7 @@ function createListener(channel, pin, onChange) {
     });
 }
 
-function removeListener(pin) {
+function removeListener(pin, pollers) {
     pollers.forEach(function(map, index) {
         if (map.pin == pin) {
             map.poller.remove(map.fd).close();
