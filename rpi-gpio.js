@@ -112,8 +112,6 @@ function Gpio() {
         } else {
             throw new Error('Cannot set invalid mode');
         }
-
-        this.emit('modeChange', mode);
     };
 
     /**
@@ -186,8 +184,6 @@ function Gpio() {
                 setEdge(pinForSetup, edge, next);
             },
             function(next) {
-                this.emit('export', channel);
-
                 if (direction === this.DIR_IN) {
                     exportedInputPins[pinForSetup] = true;
                 } else {

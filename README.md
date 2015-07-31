@@ -65,14 +65,6 @@ Tears down the module state - used for testing.
 ### Events
 See Node [EventEmitter](http://nodejs.org/api/events.html) for documentation on listening to events.
 
-#### modeChange
-Emitted when the pin addressing schema is changed
-* mode
-
-#### export
-Emitted when a channel is exported
-* channel
-
 #### change
 Emitted when the value of a channel changed
 * channel

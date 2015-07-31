@@ -55,38 +55,6 @@ describe('rpi-gpio', function() {
     });
 
     describe('setMode()', function() {
-        context('to RPI mode', function() {
-            var listener;
-
-            beforeEach(function() {
-                listener = sandbox.spy();
-                gpio.on('modeChange', listener);
-
-                gpio.setMode(gpio.MODE_RPI);
-            });
-
-            it('should emit a modeChange event and pass the mode callback', function() {
-                sinon.assert.calledOnce(listener);
-                sinon.assert.calledWith(listener, gpio.MODE_RPI);
-            });
-        });
-
-        context('to BCM mode', function() {
-            var listener;
-
-            beforeEach(function() {
-                listener = sandbox.spy();
-                gpio.on('modeChange', listener);
-
-                gpio.setMode(gpio.MODE_BCM);
-            });
-
-            it('should emit a modeChange event and pass the mode callback', function() {
-                sinon.assert.calledOnce(listener);
-                sinon.assert.calledWith(listener, gpio.MODE_BCM);
-            });
-        });
-
         context('with an invalid mode', function() {
             var invalidModeSet;
 
@@ -203,12 +171,8 @@ describe('rpi-gpio', function() {
 
             context('and minimum arguments are specified', function() {
                 var onSetup;
-                var listener;
 
                 beforeEach(function(done) {
-                    listener = sandbox.spy();
-                    gpio.on('export', listener);
-
                     onSetup = sandbox.spy(done);
                     gpio.setup(7, null, onSetup);
                 });
@@ -223,11 +187,6 @@ describe('rpi-gpio', function() {
 
                 it('should run the setup callback', function() {
                     sinon.assert.calledOnce(onSetup);
-                });
-
-                it('should emit an export event', function() {
-                    // The emitted channel is the same format as given
-                    sinon.assert.calledWith(listener, 7);
                 });
 
                 it('should set the channel edge to none by default', function() {
