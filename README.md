@@ -151,10 +151,7 @@ var delay = 2000;
 var count = 0;
 var max   = 3;
 
-gpio.on('change', function(channel, value) {
-    console.log('Channel ' + channel + ' value is now ' + value);
-});
-gpio.setup(pin, gpio.DIR_OUT, gpio.EDGE_BOTH, on);
+gpio.setup(pin, gpio.DIR_OUT, on);
 
 function on() {
     if (count >= max) {
@@ -189,13 +186,13 @@ gpio.on('change', function(channel, value) {
 
 async.parallel([
     function(callback) {
-        gpio.setup(7, gpio.DIR_OUT, gpio.EDGE_BOTH, callback)
+        gpio.setup(7, gpio.DIR_OUT, callback)
     },
     function(callback) {
-        gpio.setup(15, gpio.DIR_OUT, gpio.EDGE_BOTH, callback)
+        gpio.setup(15, gpio.DIR_OUT, callback)
     },
     function(callback) {
-        gpio.setup(16, gpio.DIR_OUT, gpio.EDGE_BOTH, callback)
+        gpio.setup(16, gpio.DIR_OUT, callback)
     },
 ], function(err, results) {
     console.log('Pins set up');
