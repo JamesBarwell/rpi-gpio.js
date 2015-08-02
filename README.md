@@ -180,10 +180,6 @@ Due to the asynchronous nature of this module, using an asynchronous flow contro
 var gpio = require('rpi-gpio');
 var async = require('async');
 
-gpio.on('change', function(channel, value) {
-    console.log('Channel ' + channel + ' value is now ' + value);
-});
-
 async.parallel([
     function(callback) {
         gpio.setup(7, gpio.DIR_OUT, callback)
