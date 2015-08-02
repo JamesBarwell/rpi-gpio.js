@@ -35,16 +35,6 @@ Sets up a channel for read or write. Must be done before the channel can be used
 Defaults to EDGE_NONE.
 * callback: Provides Error as the first argument if an error occurred.
 
-#### listen(channel, callback)
-Start listening for interrupts on the specified channel. Can't listen to the same channel multiple times.
-* channel: Reference to the pin in the current mode's schema.
-* callback: Provides Error as the first argument if an error occurred.
-
-#### stopListening(channel, callback)
-Stop listening for interrupts on the specified channel.
-* channel: Reference to the pin in the current mode's schema.
-* callback: Provides Error as the first argument if an error occurred.
-
 #### read(channel, callback)
 Reads the value of a channel.
 * channel: Reference to the pin in the current mode's schema.
@@ -125,23 +115,6 @@ gpio.on('change', function(channel, value) {
 	console.log('Channel ' + channel + ' value is now ' + value);
 });
 gpio.setup(7, gpio.DIR_IN, gpio.EDGE_BOTH);
-```
-
-### Stop listen for changes on a pin
-
-```js
-var gpio = require('rpi-gpio');
-
-gpio.on('change', function(channel, value) {
-	console.log('Channel ' + channel + ' value is now ' + value);
-});
-gpio.setup(7, gpio.DIR_IN, gpio.EDGE_BOTH);
-
-setTimeout(function () {
-    gpio.stopListening(7, function () {
-        console.log('No longer listening to channel 7');
-    });
-});
 ```
 
 ### Unexport pins opened by the module when finished
