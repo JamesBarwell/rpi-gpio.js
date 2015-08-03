@@ -27,11 +27,13 @@ Please note that there are two different and confusing ways to reference a chann
 
 ### Methods
 
-#### setup(channel [, direction], callback)
+#### setup(channel [, direction, edge], callback)
 Sets up a channel for read or write. Must be done before the channel can be used.
 * channel: Reference to the pin in the current mode's schema.
 * direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. Defaults to DIR_OUT.
-* callback: Provides Error as the first argument if an error occured.
+* edge: Interrupt generating GPIO chip setting, pass in EDGE_NONE for no interrupts, EDGE_RISING for interrupts on rising values, EDGE_FALLING for interrupts on falling values or EDGE_BOTH for all interrupts.
+Defaults to EDGE_NONE.
+* callback: Provides Error as the first argument if an error occurred.
 
 #### read(channel, callback)
 Reads the value of a channel.
@@ -47,10 +49,6 @@ Writes the value of a channel.
 #### setMode(mode)
 Sets the channel addressing schema.
 * mode: Specify either Raspberry Pi or SoC/BCM pin schemas, by passing MODE_RPI or MODE_BCM. Defaults to MODE_RPI.
-
-#### setPollFrequency(value)
-Sets the poll frequency for checking whether pin values have changed.
-* value: The polling frequency in milliseconds, defaults to 5007.
 
 #### input()
 Alias of read().
@@ -116,7 +114,7 @@ var gpio = require('rpi-gpio');
 gpio.on('change', function(channel, value) {
 	console.log('Channel ' + channel + ' value is now ' + value);
 });
-gpio.setup(7, gpio.DIR_IN);
+gpio.setup(7, gpio.DIR_IN, gpio.EDGE_BOTH);
 ```
 
 ### Unexport pins opened by the module when finished
@@ -138,7 +136,6 @@ function pause() {
 function closePins() {
     gpio.destroy(function() {
         console.log('All pins unexported');
-        return process.exit(0);
     });
 }
 ```
@@ -154,16 +151,12 @@ var delay = 2000;
 var count = 0;
 var max   = 3;
 
-gpio.on('change', function(channel, value) {
-    console.log('Channel ' + channel + ' value is now ' + value);
-});
 gpio.setup(pin, gpio.DIR_OUT, on);
 
 function on() {
     if (count >= max) {
         gpio.destroy(function() {
             console.log('Closed pins, now exit');
-            return process.exit(0);
         });
         return;
     }
@@ -186,10 +179,6 @@ Due to the asynchronous nature of this module, using an asynchronous flow contro
 ```js
 var gpio = require('rpi-gpio');
 var async = require('async');
-
-gpio.on('change', function(channel, value) {
-    console.log('Channel ' + channel + ' value is now ' + value);
-});
 
 async.parallel([
     function(callback) {
@@ -231,7 +220,6 @@ function write() {
         setTimeout(function() {
             gpio.destroy(function() {
                 console.log('Closed pins, now exit');
-                return process.exit(0);
             });
         }, 500);
     });

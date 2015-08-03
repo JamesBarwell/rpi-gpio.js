@@ -3,8 +3,10 @@ var util         = require('util');
 var EventEmitter = require('events').EventEmitter;
 var async        = require('async');
 var debug        = require('debug')('rpi-gpio');
+var Epoll        = require('epoll').Epoll;
 
 var PATH = '/sys/class/gpio';
+var POLLERS = [];
 var PINS = {
     v1: {
         // 1: 3.3v
@@ -82,15 +84,19 @@ var PINS = {
 
 function Gpio() {
     var currentPins;
-    var exportedInputPins  = {};
+    var exportedInputPins = {};
     var exportedOutputPins = {};
     var getPinForCurrentMode = getPinRpi;
-    var pollFrequency = 5007;
 
     this.DIR_IN   = 'in';
     this.DIR_OUT  = 'out';
     this.MODE_RPI = 'mode_rpi';
     this.MODE_BCM = 'mode_bcm';
+
+    this.EDGE_NONE    = 'none';
+    this.EDGE_RISING  = 'rising';
+    this.EDGE_FALLING = 'falling';
+    this.EDGE_BOTH    = 'both';
 
     /**
      * Set pin reference mode. Defaults to 'mode_rpi'.
@@ -110,30 +116,25 @@ function Gpio() {
     };
 
     /**
-     * Set a custom polling frequency for watching pin changes
-     *
-     * @param {number} value The frequency to poll at, in milliseconds
-     */
-    this.setPollFrequency = function(value) {
-        if (typeof value === 'number') {
-            pollFrequency = value;
-        }
-    };
-
-    /**
      * Setup a channel for use as an input or output
      *
      * @param {number}   channel   Reference to the pin in the current mode's schema
      * @param {string}   direction The pin direction, either 'in' or 'out'
+     * @param edge       edge Informs the GPIO chip if it needs to generate interrupts. Either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'
      * @param {function} onSetup   Optional callback
      */
-    this.setup = function(channel, direction, onSetup /*err*/) {
+    this.setup = function(channel, direction, edge, onSetup /*err*/) {
         if (arguments.length === 2 && typeof direction == 'function') {
             onSetup = direction;
             direction = this.DIR_OUT;
+            edge = this.EDGE_NONE;
+        } else if (arguments.length === 3 && typeof edge == 'function') {
+            onSetup = edge;
+            edge = this.EDGE_NONE;
         }
 
         direction = direction || this.DIR_OUT;
+        edge = edge || this.EDGE_NONE;
         onSetup = onSetup || function() {};
 
         if (!channel) {
@@ -145,6 +146,12 @@ function Gpio() {
         if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
             return process.nextTick(function() {
                 onSetup(new Error('Cannot set invalid direction'));
+            });
+        }
+
+        if (edge !== this.EDGE_NONE && edge !== this.EDGE_RISING && edge !== this.EDGE_FALLING && edge !== this.EDGE_BOTH) {
+            return process.nextTick(function() {
+                onSetup(new Error('Cannot set invalid edge'));
             });
         }
 
@@ -169,8 +176,10 @@ function Gpio() {
                 exportPin(pinForSetup, next);
             },
             function(next) {
+                setEdge(pinForSetup, edge, next);
+            },
+            function(next) {
                 this.emit('export', channel);
-                createListener.call(this, channel, pinForSetup);
 
                 if (direction === this.DIR_IN) {
                     exportedInputPins[pinForSetup] = true;
@@ -179,6 +188,9 @@ function Gpio() {
                 }
 
                 setDirection(pinForSetup, direction, next);
+            }.bind(this),
+            function(next) {
+                this.listen(channel, next);
             }.bind(this)
         ], onSetup);
     };
@@ -190,7 +202,7 @@ function Gpio() {
      * @param {boolean}  value   If true, turns the channel on, else turns off
      * @param {function} cb      Optional callback
      */
-    this.write = this.output = function(channel, value, cb /*err*/ ) {
+    this.write = this.output = function(channel, value, cb /*err*/) {
         var pin = getPinForCurrentMode(channel);
 
         if (!exportedOutputPins[pin]) {
@@ -207,7 +219,7 @@ function Gpio() {
         }
 
         value = (!!value && value !== '0') ? '1' : '0';
-        fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb || function () {});
+        fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb || function() {});
     };
 
     /**
@@ -232,15 +244,73 @@ function Gpio() {
     };
 
     /**
+     * Listen for interrupts on a channel
+     *
+     * @param {number}      channel The channel to watch
+     * @param {function}    cb Callback which receives the channel's err
+     */
+    this.listen = function(channel, cb /*err*/) {
+
+        var _this = this;
+        var pin = getPinForCurrentMode(channel);
+        if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
+            return process.nextTick(function() {
+                cb(new Error('Pin has not been exported'));
+            });
+        }
+
+        POLLERS.forEach(function(map) {
+            if (map.pin == pin) {
+                return process.nextTick(function() {
+                    cb(new Error('Already watching that pin!'));
+                });
+            }
+        });
+
+        createListener(channel, pin, function(readChannel) {
+
+            _this.read(readChannel, function(err, value) {
+                debug(
+                    'failed to read value after a change on channel %d',
+                    readChannel
+                );
+                _this.emit('change', readChannel, value);
+            });
+        });
+        return cb(null)
+    };
+
+    /**
+     * Stop listening for interrupts on a channel
+     *
+     * @param {number}      channel The channel to stop watching
+     * @param {function}    cb Callback which receives the channel's err
+     */
+    this.stopListening = function(channel, cb /*err*/) {
+        pin = getPinForCurrentMode(channel);
+        cb = cb || function() {};
+
+        if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
+            return process.nextTick(function() {
+                cb(new Error('Pin has not been exported'));
+            });
+        }
+
+        removeListener(pin, cb)
+    };
+
+    /**
      * Unexport any pins setup by this module
      *
      * @param {function} cb Optional callback
      */
     this.destroy = function(cb) {
+        var _this = this;
         var tasks = Object.keys(exportedOutputPins)
             .concat(Object.keys(exportedInputPins))
             .map(function(pin) {
                 return function(done) {
+                    removeListener(pin, function() { })
                     unexportPin(pin, done);
                 }
             });
@@ -253,12 +323,12 @@ function Gpio() {
      */
     this.reset = function() {
         exportedOutputPins = {};
-        exportedInputPins  = {};
+        exportedInputPins = {};
         this.removeAllListeners();
 
         currentPins = undefined;
         getPinForCurrentMode = getPinRpi;
-        pollFrequency = 5007;
+        POLLERS = []
     };
 
     // Init
@@ -327,28 +397,15 @@ function Gpio() {
             40
         ].indexOf(channel) !== -1 ? (channel + '') : null;
     };
-
-    function createListener(channel, pin) {
-        debug('listen for pin %d', pin);
-        var Gpio = this;
-        fs.watchFile(
-            PATH + '/gpio' + pin + '/value',
-            { persistent: true, interval: pollFrequency },
-            function(current, previous) {
-                if (current.mtime > previous.mtime) {
-                    Gpio.read(channel, function(err, value) {
-                        debug(
-                            'failed to read value after a change on channel %d',
-                            channel
-                        );
-                        Gpio.emit('change', channel, value);
-                    });
-                }
-            }
-        );
-    };
 }
 util.inherits(Gpio, EventEmitter);
+
+function setEdge(pin, edge, cb) {
+    debug('set edge %s on pin %d', edge.toUpperCase(), pin);
+    fs.writeFile(PATH + '/gpio' + pin + '/edge', edge, function(err) {
+        if (cb) return cb(err);
+    });
+}
 
 function setDirection(pin, direction, cb) {
     debug('set direction %s on pin %d', direction.toUpperCase(), pin);
@@ -366,7 +423,6 @@ function exportPin(pin, cb) {
 
 function unexportPin(pin, cb) {
     debug('unexport pin %d', pin);
-    fs.unwatchFile(PATH + '/gpio' + pin + '/value');
     fs.writeFile(PATH + '/unexport', pin, function(err) {
         if (cb) return cb(err);
     });
@@ -376,6 +432,35 @@ function isExported(pin, cb) {
     fs.exists(PATH + '/gpio' + pin, function(exists) {
         return cb(null, exists);
     });
+}
+
+function createListener(channel, pin, cb) {
+    debug('listen for pin %d', pin);
+    var fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
+
+    var poller = new Epoll(function(err, fd, events) {
+
+        clearInterrupt(fd);
+        cb(channel);
+    });
+
+    clearInterrupt(fd);
+    poller.add(fd, Epoll.EPOLLPRI);
+    POLLERS.push({pin: pin, poller: poller, fd: fd});
+}
+
+function removeListener(pin, cb) {
+    POLLERS.forEach(function(map, index) {
+        if (map.pin == pin) {
+            map.poller.remove(map.fd).close();
+            POLLERS.splice(index, 1);
+            return cb(null);
+        }
+    });
+}
+
+function clearInterrupt(fd) {
+    fs.readSync(fd, new Buffer(1), 0, 1, 0);
 }
 
 module.exports = new Gpio;
