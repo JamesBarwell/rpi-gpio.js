@@ -9,7 +9,8 @@
     "gpio"
   ],
   "directories": {
-    "test": "test"
+    "test": "test",
+    "integration": "integration"
   },
   "devDependencies": {
     "mocha": "~1.18.2",
@@ -19,7 +20,8 @@
   "scripts": {
     "test": "mocha",
     "spec": "mocha --reporter spec",
-    "coverage": "istanbul cover _mocha"
+    "coverage": "istanbul cover _mocha",
+    "int": "mocha test/integration"
   },
   "repository": {
     "type": "git",
