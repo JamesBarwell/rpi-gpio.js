@@ -202,6 +202,7 @@ function Gpio() {
                             );
                             return
                         }
+                        debug('emitting change on channel %s with value %s', readChannel, value);
                         this.emit('change', readChannel, value);
                     }.bind(this));
                 }.bind(this));
@@ -228,6 +229,8 @@ function Gpio() {
         }
 
         value = (!!value && value !== '0') ? '1' : '0';
+
+        debug('writing pin %d with value %s', pin, value);
         fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb);
     };
 
@@ -255,6 +258,7 @@ function Gpio() {
                 return cb(err)
             }
             data = (data + '').trim() || '0';
+            debug('read pin %s with value %s', pin, data);
             return cb(null, data === '1');
         });
     };
