@@ -203,7 +203,7 @@ function Gpio() {
                             return
                         }
                         this.emit('change', readChannel, value);
-                    });
+                    }.bind(this));
                 }.bind(this));
                 next()
             }.bind(this)
