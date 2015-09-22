@@ -3,6 +3,4 @@ sudo: false
 node_js:
   - "0.10"
   - "0.12"
-  - "node"
-  - "iojs-v1.2.0"
-  - "iojs"
+  - "4"
