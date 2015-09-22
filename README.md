@@ -237,5 +237,9 @@ and create a coverage report with:
 ```
 npm run coverage
 ```
+There is also an integration test that you can run on Raspberry Pi hardware, having connected two GPIO pins across a resistor. The command to run the test will provide further instructions on how to set up the hardware:
+```
+npm run int
+```
 
-The tests use [mochajs](http://mochajs.org) to stub and mock out file system calls, and [Sinon.JS](http://sinonjs.org) as the test framework.
+The tests use [mochajs](http://mochajs.org) as the test framework, and [Sinon.JS](http://sinonjs.org) to stub and mock out file system calls.
