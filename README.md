@@ -14,6 +14,10 @@ This module can then be installed with npm:
 npm install rpi-gpio
 ```
 
+### Dependency
+
+If you are having trouble installing this module make sure you are running gcc/g++ `-v 4.8` or higher. [Here](https://github.com/fivdi/onoff/wiki/Node.js-v4-and-native-addons) is a installation guild.
+
 ## Usage
 Firstly, make make sure you are running your application as root or with sudo, else the Raspberry Pi will not let you output to the GPIO.
 
