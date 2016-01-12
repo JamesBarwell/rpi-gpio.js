@@ -3,7 +3,13 @@ var util         = require('util');
 var EventEmitter = require('events').EventEmitter;
 var async        = require('async');
 var debug        = require('debug')('rpi-gpio');
-var Epoll        = require('epoll').Epoll;
+var Epoll;
+
+if (process.platform == 'linux') {
+    Epoll = require('epoll').Epoll
+} else {
+    console.log('This module requires linux in order to poll for hardware interrupts')
+}
 
 var PATH = '/sys/class/gpio';
 var PINS = {
@@ -205,7 +211,7 @@ function Gpio() {
                         debug('emitting change on channel %s with value %s', readChannel, value);
                         this.emit('change', readChannel, value);
                     }.bind(this));
-                }.bind(this));
+                }.bind(this), onSetup);
                 next()
             }.bind(this)
         ], onSetup);
@@ -308,6 +314,11 @@ function Gpio() {
         fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
             if (err) return cb(err);
 
+            var hardware = data.match(/Hardware\s*:\s*[0-9A-z]*([0-9A-z]{7})/)
+            if (hardware !== 'BCM2708') {
+                return cb(new Error('System is not a raspberry pi! Unable to correctly setup.'))
+            }
+
             // Match the last 4 digits of the number following "Revision:"
             var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
             var revisionNumber = parseInt(match[1], 16);
@@ -367,11 +378,13 @@ function Gpio() {
      * @param {number}      channel The channel to watch
      * @param {function}    cb Callback which receives the channel's err
      */
-    function listen(channel, onChange) {
+    function listen(channel, onChange, onSetup) {
         var pin = getPinForCurrentMode(channel);
 
         if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
-            throw new Error('Channel %d has not been exported', channel);
+            return process.nextTick(function() {
+                onSetup(new Error('Channel %d has not been exported', channel));
+            })
         }
 
         debug('listen for pin %d', pin);
