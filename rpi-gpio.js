@@ -310,29 +310,36 @@ function Gpio() {
         if (currentPins) {
             return cb(null);
         }
+        var path = '/proc/cpuinfo';
 
-        fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
-            if (err) return cb(err);
+        fs.access(path, fs.F_OK, function(err) {
+            if (!err) {
+                fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
+                    if (err) return cb(err);
 
-            var hardware = data.match(/Hardware\s*:\s*[0-9A-z]*([0-9A-z]{7})/)
-            if (hardware !== 'BCM2708') {
+                    var hardware = data.match(/Hardware\s*:\s*[0-9A-z]*([0-9A-z]{7})/)
+                    if (hardware !== 'BCM2708') {
+                        return cb(new Error('System is not a raspberry pi! Unable to correctly setup.'))
+                    }
+
+                    // Match the last 4 digits of the number following "Revision:"
+                    var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+                    var revisionNumber = parseInt(match[1], 16);
+                    var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
+
+                    debug(
+                        'seen hardware revision %d; using pin mode %s',
+                        revisionNumber,
+                        pinVersion
+                    );
+
+                    currentPins = PINS[pinVersion];
+
+                    return cb(null);
+                });
+            } else {
                 return cb(new Error('System is not a raspberry pi! Unable to correctly setup.'))
             }
-
-            // Match the last 4 digits of the number following "Revision:"
-            var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
-            var revisionNumber = parseInt(match[1], 16);
-            var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
-
-            debug(
-                'seen hardware revision %d; using pin mode %s',
-                revisionNumber,
-                pinVersion
-            );
-
-            currentPins = PINS[pinVersion];
-
-            return cb(null);
         });
     };
 
