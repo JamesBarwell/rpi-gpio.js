@@ -181,7 +181,7 @@ function Gpio() {
                 exportPin(pinForSetup, next);
             },
             function(next) {
-              async.retry({times: 10, interval: 100},
+              async.retry({times: 100, interval: 10},
                 function(cb){
                   setEdge(pinForSetup, edge, cb);
                 },
@@ -197,7 +197,7 @@ function Gpio() {
                     exportedOutputPins[pinForSetup] = true;
                 }
 
-                async.retry({times: 10, interval: 100},
+                async.retry({times: 100, interval: 10},
                   function(cb) {
                     setDirection(pinForSetup, direction, cb);
                   },
