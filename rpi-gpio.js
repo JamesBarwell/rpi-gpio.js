@@ -181,7 +181,14 @@ function Gpio() {
                 exportPin(pinForSetup, next);
             },
             function(next) {
-                setEdge(pinForSetup, edge, next);
+              async.retry({times: 10, interval: 100},
+                function(cb){
+                  setEdge(pinForSetup, edge, cb);
+                },
+                function(err){
+                  // wrapped here because waterfall can't handle positive result
+                  next(err);
+                });
             },
             function(next) {
                 if (direction === this.DIR_IN) {
@@ -190,7 +197,14 @@ function Gpio() {
                     exportedOutputPins[pinForSetup] = true;
                 }
 
-                setDirection(pinForSetup, direction, next);
+                async.retry({times: 10, interval: 100},
+                  function(cb) {
+                    setDirection(pinForSetup, direction, cb);
+                  },
+                  function(err) {
+                    // wrapped here because waterfall can't handle positive result
+                    next(err);
+                  });
             }.bind(this),
             function(next) {
                 listen(channel, function(readChannel) {
