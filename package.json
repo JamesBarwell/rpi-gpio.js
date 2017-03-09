@@ -33,6 +33,7 @@
   "dependencies": {
     "async": "1.x",
     "debug": "2.x",
-    "epoll": "0.1.x"
+    "epoll": "0.1.x",
+    "promise": "^7.1.1"
   }
 }
