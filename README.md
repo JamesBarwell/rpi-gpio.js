@@ -297,7 +297,7 @@ function delayedWrite(pin, value) {
 }
 ```
 ### *But Wait There's More!!!*
-Add actions when you want and maintaining order!
+Add actions when you want and maintain the order!
 ```js
 var gpio = require('rpi-gpio');
 
