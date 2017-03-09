@@ -23,9 +23,13 @@ Firstly, make make sure you are running your application as root or with sudo, e
 
 Before you can read or write, you must use setup() to open a channel, and must specify whether it will be used for input or output. Having done this, you can then read in the state of the channel or write a value to it using read() or write().
 
-All of the functions relating to the pin state within this module are asynchronous, so where necessary - for example in reading the value of a channel - a callback must be provided. This module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use its functions to listen to events.
+All of the functions relating to the pin state within this module now support **Promises** - for example reading the value of a channel - either provide a callback or chain the read with `.then` reference [Promisejs API](https://www.promisejs.org/api/). This module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use its functions to listen to events.
 
 Please note that there are two different and confusing ways to reference a channel; either using the Raspberry Pi or the BCM/SoC naming schema (sadly, neither of which match the physical pins!). This module supports both schemas, with Raspberry Pi being the default. Please see [this page](http://elinux.org/RPi_Low-level_peripherals) for more details.
+
+##### Updates 3/9/2017
+**Callbacks are optional for `setup`, `write`, `read`, `destroy`. Checkout the additional examples using promises**
+*Note: If the callback parameter is not a function, it simply returns the promise without any changes. If the callback is a function, it is called and undefined is returned. Reference: [Promise.prototype.nodeify](https://www.promisejs.org/api/)
 
 ## API
 
@@ -89,6 +93,20 @@ function readInput() {
 }
 ```
 
+```js
+var gpio = require('rpi-gpio');
+
+gpio.setup(7, gpio.DIR_IN)
+    .then(function () {
+        return gpio.read(7)
+    })
+    .then(function (value) {
+        console.log('The value is ' + value);
+    },function(error){
+        /* do something with the error */
+    });
+```
+
 ### Setup and write to a pin
 ```js
 var gpio = require('rpi-gpio');
@@ -101,6 +119,18 @@ function write() {
         console.log('Written to pin');
     });
 }
+```
+
+```js
+var gpio = require('rpi-gpio');
+
+gpio.setup(7, gpio.DIR_OUT)
+    .then(function () {
+        return gpio.write(7, true)
+    })
+    .then(function () {
+        console.log('Written to pin');
+    });
 ```
 
 ### Listen for changes on a pin
@@ -228,6 +258,127 @@ function delayedWrite(pin, value, callback) {
 }
 ```
 
+### Using flow control modules 2
+Using promises can further help to simplify development. This example uses [promise.js](https://www.promisejs.org/) to turn pins on and off. 
+```js
+var gpio = require('rpi-gpio');
+
+Promise.all([
+    gpio.setup(7, gpio.DIR_OUT),
+    gpio.setup(15, gpio.DIR_OUT),
+    gpio.setup(16, gpio.DIR_OUT)])
+    .then(function () {
+        return delayedWrite(7, true)
+    })
+    .then(function () {
+        return delayedWrite(15, true)
+    })
+    .then(function () {
+        return delayedWrite(16, true)
+    })
+    .then(function () {
+        return delayedWrite(7, false)
+    })
+    .then(function () {
+        return delayedWrite(15, false)
+    })
+    .then(function () {
+        return delayedWrite(16, false)
+    })
+
+function delayedWrite(pin, value) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            return gpio.write(pin, value).then(resolve, reject);
+            /* this would also work*/
+            // return gpio.write(pin, value, resolve)
+        }, 500);
+    });
+}
+```
+### *But Wait There's More!!!*
+Add actions when you want and maintaining order!
+```js
+var gpio = require('rpi-gpio');
+
+var awesome = Promise.all([
+    gpio.setup(7, gpio.DIR_OUT),
+    gpio.setup(15, gpio.DIR_OUT),
+    gpio.setup(16, gpio.DIR_OUT)])
+    .then(function () {
+        return delayedWrite(7, true)
+            .then(function () {
+                return delayedWrite(16, true)
+            })
+    });
+
+awesome
+    .then(function () {
+        return delayedWrite(15, true)
+    })
+    .then(function () {
+        return delayedWrite(7, false)
+    })
+    .then(function () {
+        return delayedWrite(15, false)
+    })
+    .then(function () {
+        return delayedWrite(16, false)
+    });
+
+function delayedWrite(pin, value) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            return gpio.write(pin, value).then(resolve, reject);
+            /* this would also work*/
+            // return gpio.write(pin, value, resolve)
+        }, 500);
+    });
+}
+```
+
+### Hold that Result
+Consider the situation, the state of pin 15 returns before adding the next `.then`.
+The promise will hold the result until it used. 
+```js
+var awesome = Promise.all([
+    gpio.setup(7, gpio.DIR_OUT),
+    gpio.setup(15, gpio.DIR_OUT),
+    gpio.setup(16, gpio.DIR_OUT)])
+    .then(function () {
+        return delayedWrite(7, true)
+            .then(function () {
+                return delayedWrite(16, true)
+            }).then(function () {
+                return gpio.read(15)
+            })
+    });
+
+awesome
+    .then(function (result) {
+        if (!result)
+            return delayedWrite(15, true)
+    })
+    .then(function () {
+        return delayedWrite(7, false)
+    })
+    .then(function () {
+        return delayedWrite(15, false)
+    })
+    .then(function () {
+        return delayedWrite(16, false)
+    });
+
+function delayedWrite(pin, value) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            return gpio.write(pin, value).then(resolve, reject);
+            /* this would also work*/
+            // return gpio.write(pin, value, resolve)
+        }, 500);
+    });
+}
+```
 ## Contributing
 Contributions are appreciated, both in the form of bug reports and pull requests.
 
