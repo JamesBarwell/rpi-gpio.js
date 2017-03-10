@@ -312,7 +312,7 @@ describe('rpi-gpio', function() {
 
             context('when given string "1"', function() {
                 beforeEach(function() {
-                    gpio.write(7, 1);
+                    gpio.write(7, '1');
                 });
 
                 it('should normalise to string "1"', function() {
