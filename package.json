@@ -35,6 +35,7 @@
     "async": "1.x",
     "debug": "2.x",
     "epoll": "0.1.x",
+    "object-assign": "^4.1.1",
     "promise": "^7.1.1"
   }
 }

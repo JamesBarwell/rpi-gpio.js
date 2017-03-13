@@ -4,6 +4,8 @@ var EventEmitter = require('events').EventEmitter;
 var Promise = require('promise');
 var debug = require('debug')('rpi-gpio');
 var Epoll = require('epoll').Epoll;
+const objectAssign = require('object-assign');
+
 var PATH = '/sys/class/gpio';
 var PINS = {
     v1: {
@@ -167,7 +169,7 @@ function Gpio() {
 
         // Assign channel to params
         if (channel && typeof(channel) == 'object') {
-            params = Object.assign(params, channel);
+            params = objectAssign(params, channel);
         } else {
             params['channel'] = channel;
         }
@@ -269,7 +271,7 @@ function Gpio() {
             'type':    type || setupResolveType
         };
         if (channel && typeof(channel) == 'object') {
-            Object.assign(params, channel);
+            objectAssign(params, channel);
         } else {
             params['channel'] = channel;
         }
@@ -314,7 +316,7 @@ function Gpio() {
             'type':    type || setupResolveType
         };
         if (channel && typeof(channel) == 'object') {
-            Object.assign(params, channel);
+            objectAssign(params, channel);
         } else {
             params['channel'] = channel;
         }
