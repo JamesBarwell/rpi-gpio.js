@@ -35,7 +35,8 @@ awesome
 function delayedWrite(pin, value) {
     return new Promise(function (resolve, reject) {
         setTimeout(function () {
-            return gpio.write(pin, value).then(resolve, reject);
+            return gpio.write(pin, value)
+                .then(resolve, reject);
         }, 500);
     });
 }

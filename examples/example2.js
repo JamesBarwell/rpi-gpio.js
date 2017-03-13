@@ -3,7 +3,7 @@ var gpio = require('../rpi-gpio');
 var awesome = Promise.all([
     gpio.setup(simpleSetup(3)),
     gpio.setup(simpleSetup(5)),
-    gpio.setup(customeSetup(7, "Hello World!!"))])
+    gpio.setup(customSetup(7, "Hello World!!"))])
     .then(function (array) {
         console.log(array)
         return array.forEach(function(element) {
@@ -33,14 +33,15 @@ function simpleSetup(pin) {
     return {'channel': pin}
 }
 
-function customeSetup(pin, other) {
+function customSetup(pin, other) {
     return {'channel': pin, 'other': other}
 }
 
 function delayedWrite(pin, value) {
     return new Promise(function (resolve, reject) {
         setTimeout(function () {
-            return gpio.write(pin, value).then(resolve, reject);
+            return gpio.write(pin, value)
+                .then(resolve, reject);
         }, 500);
     });
 }
