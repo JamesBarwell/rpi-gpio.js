@@ -20,6 +20,7 @@
   "scripts": {
     "test": "mocha",
     "spec": "mocha --reporter spec",
+    "specwatch": "mocha --watch --reporter spec",
     "coverage": "istanbul cover _mocha",
     "int": "mocha test/integration"
   },
