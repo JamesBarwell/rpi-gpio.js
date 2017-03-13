@@ -27,36 +27,51 @@ All of the functions relating to the pin state within this module now support **
 
 Please note that there are two different and confusing ways to reference a channel; either using the Raspberry Pi or the BCM/SoC naming schema (sadly, neither of which match the physical pins!). This module supports both schemas, with Raspberry Pi being the default. Please see [this page](http://elinux.org/RPi_Low-level_peripherals) for more details.
 
+##### Updates 3/13/2017
+Support for objects as the first parameter in the following methods `setup`, `write`, `read`.
+Object will overwrite method parameters and callback inside the object is not used.
+
+
 ##### Updates 3/9/2017
 **Callbacks are optional for `setup`, `write`, `read`, `destroy`. Checkout the additional examples using promises**
-*Note: If the callback parameter is not a function, it simply returns the promise without any changes. If the callback is a function, it is called and undefined is returned. Reference: [Promise.prototype.nodeify](https://www.promisejs.org/api/)
+* Note: If the callback parameter is not a function, it simply returns the promise without any changes. If the callback is a function, it is called and undefined is returned. Reference: [Promise.prototype.nodeify](https://www.promisejs.org/api/)
 
 ## API
 
 ### Methods
 
-#### setup(channel [, direction, edge], callback)
+#### setup(channel [, direction, edge, type], callback)
 Sets up a channel for read or write. Must be done before the channel can be used.
 * channel: Reference to the pin in the current mode's schema.
 * direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. Defaults to DIR_OUT.
 * edge: Interrupt generating GPIO chip setting, pass in EDGE_NONE for no interrupts, EDGE_RISING for interrupts on rising values, EDGE_FALLING for interrupts on falling values or EDGE_BOTH for all interrupts.
 Defaults to EDGE_NONE.
+* type: Boolean if true, will callback with an object, else channel number
 * callback: Provides Error as the first argument if an error occurred.
 
-#### read(channel, callback)
+#### read(channel [, type], callback)
 Reads the value of a channel.
 * channel: Reference to the pin in the current mode's schema.
-* callback: Provides Error as the first argument if an error occured, otherwise the pin value boolean as the second argument.
+* type: Boolean if true, will callback with an object containing a 'value' key, else read result
+* callback: Provides Error as the first argument if an error occurred, otherwise the pin value boolean as the second argument.
 
-#### write(channel, value [, callback])
+#### write(channel, value [, type, callback])
 Writes the value of a channel.
 * channel: Reference to the pin in the current mode's schema.
 * value: Boolean value to specify whether the channel will turn on or off.
-* callback: Provides Error as the first argument if an error occured.
+* type: Boolean if true, will callback with an object, else channel number
+* callback: Provides Error as the first argument if an error occurred.
 
 #### setMode(mode)
 Sets the channel addressing schema.
 * mode: Specify either Raspberry Pi or SoC/BCM pin schemas, by passing MODE_RPI or MODE_BCM. Defaults to MODE_RPI.
+
+#### setResolveWithObject(boolean)
+Sets the result type.
+* boolean: if true, will results will return an object, else channel number / read value
+
+#### getResolveWithObject()
+Returns the current global result type.
 
 #### input()
 Alias of read().
