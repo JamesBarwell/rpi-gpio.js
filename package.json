@@ -1,6 +1,6 @@
 {
   "name": "rpi-gpio",
-  "version": "0.7.0",
+  "version": "0.9.0",
   "description": "Control Raspberry Pi GPIO pins with node.js",
   "main": "rpi-gpio.js",
   "keywords:": [
@@ -20,6 +20,7 @@
   "scripts": {
     "test": "mocha",
     "spec": "mocha --reporter spec",
+    "specwatch": "mocha --watch --reporter spec",
     "coverage": "istanbul cover _mocha",
     "int": "mocha test/integration"
   },
@@ -33,6 +34,8 @@
   "dependencies": {
     "async": "1.x",
     "debug": "2.x",
-    "epoll": "0.1.x"
+    "epoll": "0.1.x",
+    "object-assign": "^4.1.1",
+    "promise": "^7.1.1"
   }
 }
