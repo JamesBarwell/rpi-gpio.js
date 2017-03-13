@@ -4,7 +4,6 @@ var EventEmitter = require('events').EventEmitter;
 var Promise = require('promise');
 var debug = require('debug')('rpi-gpio');
 var Epoll = require('epoll').Epoll;
-
 var PATH = '/sys/class/gpio';
 var PINS = {
     v1: {
@@ -87,6 +86,7 @@ function Gpio() {
     var exportedOutputPins = {};
     var getPinForCurrentMode = getPinRpi;
     var pollers = {};
+    var setupResolveType = false;
 
     this.DIR_IN = 'in';
     this.DIR_OUT = 'out';
@@ -115,15 +115,36 @@ function Gpio() {
     };
 
     /**
+     * Sets global function return type to objects, Defaults to false
+     *
+     * @param {boolean}         boolean     When true return objects, false for channel number / `read` value state
+     */
+    this.setResolveWithObject = function (boolean) {
+        setupResolveType = (boolean === true);
+    };
+
+    /**
+     * Get current global function return type
+     *
+     * @returns {boolean}      When true objects, false for channel number / `read` value state
+     */
+    this.getResolveWithObject = function () {
+        return (setupResolveType === true);
+    };
+
+    /**
      * Setup a channel for use as an input or output
      *
-     * @param {number}      channel   Reference to the pin in the current mode's schema
-     * @param {string}      direction The pin direction, either 'in' or 'out'
-     * @param edge          edge Informs the GPIO chip if it needs to generate interrupts. Either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'
-     * @param {function}    onSetup   Optional callback
-     * @returns {Promise}   Returns a Promise when callback is null
+     * @param {number, object}  channel     Reference to the pin in the current mode's schema or
+     * @param {string}          direction   The pin direction, either 'in' or 'out'
+     * @param edge              edge        Informs the GPIO chip if it needs to generate interrupts. Either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'
+     * @param {boolean}         type        Defines the resolve value
+     * @param {function}        onSetup     Optional callback
+     * @returns {Promise}       Returns a Promise when callback is null.
+     *                          Promise resolves with channel number or the channel object and the resulting values for keys: 'channel', 'direction', 'edge', 'type'
+     *                          can be changed globally with `setupResolveType` or given the key 'type'.
      */
-    this.setup = function (channel, direction, edge, onSetup /*err*/) {
+    this.setup = function (channel, direction, edge, type, onSetup /*err*/) {
         if (arguments.length === 2 && typeof direction == 'function') {
             onSetup = direction;
             direction = this.DIR_OUT;
@@ -132,19 +153,40 @@ function Gpio() {
             onSetup = edge;
             edge = this.EDGE_NONE;
         }
+        else if (arguments.length === 4 && typeof type == 'function') {
+            onSetup = type;
+            type = setupResolveType;
+        }
 
-        channel = parseInt(channel);
-        direction = direction || this.DIR_OUT;
-        edge = edge || this.EDGE_NONE;
-        onSetup = onSetup || null;
+        var params = {
+            'channel':   null,
+            'direction': direction || this.DIR_OUT,
+            'edge':      edge || this.EDGE_NONE,
+            'type':      type || setupResolveType
+        };
 
-        if (typeof channel !== 'number') {
+        // Assign channel to params
+        if (channel && typeof(channel) == 'object') {
+            params = Object.assign(params, channel);
+        } else {
+            params['channel'] = channel;
+        }
+
+        channel = parseInt(params['channel']);
+        direction = params['direction'];
+        edge = params['edge'];
+        onSetup = (typeof onSetup == 'function') ? onSetup : null;
+
+        debug('channel: %d, direction: %d, edge : %d', channel, direction, edge);
+        if (isNaN(channel)) {
             return new Promise.reject(new Error('Channel must be a number')).nodeify(onSetup);
         }
         if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
             return new Promise.reject(new Error('Cannot set invalid direction')).nodeify(onSetup);
         }
-
+        if (!params.hasOwnProperty('type') || (params['type'] !== true && params['type'] !== false)) {
+            return new Promise.reject(new Error('Cannot set invalid resolve mode true or false')).nodeify(onSetup);
+        }
         if ([
                 this.EDGE_NONE,
                 this.EDGE_RISING,
@@ -185,69 +227,121 @@ function Gpio() {
                 return setDirection(pinForSetup, direction);
             }.bind(this))
             .then(function () {
-                    listen(channel, function (readChannel) {
-                        this.read(readChannel)
-                            .then(function (value) {
-                                    debug('emitting change on channel %s with value %s', readChannel, value);
-                                    this.emit('change', readChannel, value);
-                                },
-                                function (err) {
-                                    debug(
-                                        'Error reading channel value after change, %d',
-                                        readChannel
-                                    );
-                                })
-                    }.bind(this));
-                }.bind(this)
-            ).nodeify(onSetup);
-
+                listen(channel, function (readChannel) {
+                    this.read(readChannel)
+                        .then(function (value) {
+                                debug('emitting change on channel %s with value %s', readChannel, value);
+                                this.emit('change', readChannel, value);
+                            },
+                            function (err) {
+                                debug(
+                                    'Error reading channel value after change, %d',
+                                    readChannel
+                                );
+                            })
+                }.bind(this));
+            }.bind(this))
+            .then(function () {
+                return (params['type'] ? params : channel);
+            })
+            .nodeify(onSetup);
     };
 
     /**
      * Write a value to a channel
      *
-     * @param {number}   channel The channel to write to
+     * @param {number, object}   channel    The channel to write to
      * @param {boolean}  value   If true, turns the channel on, else turns off
      * @param {function} cb      Optional callback
      * @returns {Promise}        Returns a Promise when callback is null
+     *                           Promise resolves with channel number or the channel object and the resulting values for keys: 'channel', 'value', 'type'
+     *                           can be changed globally with `setupResolveType` or given the key 'type'.
      */
-    this.write = this.output = function (channel, value, cb /*err*/) {
-        return new Promise(function (resolve, reject) {
-            var pin = getPinForCurrentMode(channel);
-            if (!exportedOutputPins[pin]) {
-                return reject(new Error('Pin has not been exported for write'));
-            }
+    this.write = this.output = function (channel, value, type, cb /*err*/) {
+        if (arguments.length === 3 && typeof type == 'function') {
+            cb = type;
+            type = setupResolveType;
+        }
 
-            value = (!!value && value !== '0') ? '1' : '0';
+        var params = {
+            'channel': null,
+            'value':   value,
+            'type':    type || setupResolveType
+        };
+        if (channel && typeof(channel) == 'object') {
+            Object.assign(params, channel);
+        } else {
+            params['channel'] = channel;
+        }
 
-            debug('writing pin %d with value %s', pin, value);
-            writeToPath(PATH + '/gpio' + pin + '/value', value)
-                .then(resolve, reject);
-        }).nodeify(cb);
+        channel = params['channel'];
+        value = params['value'];
+        type = params['type'];
+
+        var pin = getPinForCurrentMode(channel);
+        if (!exportedOutputPins[pin]) {
+            return new Promise.reject(new Error('Pin has not been exported for write')).nodeify(cb);
+        }
+
+        value = (!!value && value !== '0') ? '1' : '0';
+
+        debug('writing pin %d with value %s', pin, value);
+        return writeToPath(PATH + '/gpio' + pin + '/value', value)
+            .then(function () {
+                return (type === true ? params : channel)
+            })
+            .nodeify(cb);
+
     };
 
     /**
      * Read a value from a channel
      *
-     * @param {number}   channel The channel to read from
-     * @param {function} cb      Callback which receives the channel's boolean value
+     * @param {number, object}   channel    The channel to read from
+     * @param {function} cb      Callback   which receives the channel's boolean value
      * @returns {Promise}        Returns a Promise when callback is null
+     *                           Promise resolves with read value or the channel object and the resulting values for keys: 'channel', 'value', 'type'
+     *                           can be changed globally with `setupResolveType` or given the key 'type'.
      */
-    this.read = this.input = function (channel, cb /*err,value*/) {
-        return new Promise(function (resolve, reject) {
-            var pin = getPinForCurrentMode(channel);
+    this.read = this.input = function (channel, type, cb /*err,value*/) {
+        if (arguments.length === 2 && typeof type == 'function') {
+            cb = type;
+            type = setupResolveType;
+        }
 
-            if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
-                return reject(new Error('Pin has not been exported'));
-            }
+        var params = {
+            'channel': null,
+            'type':    type || setupResolveType
+        };
+        if (channel && typeof(channel) == 'object') {
+            Object.assign(params, channel);
+        } else {
+            params['channel'] = channel;
+        }
 
-            readFromPath(PATH + '/gpio' + pin + '/value', 'utf-8')
-                .then(function (data) {
-                    data = (data + '').trim() || '0';
-                    debug('read pin %s with value %s', pin, data);
-                    return resolve(data === '1');
-                }, reject);
-        }).nodeify(cb);
+        channel = params['channel'];
+        type = params['type'];
+
+        var pin = getPinForCurrentMode(channel);
+        if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
+            return new Promise.reject(new Error('Pin has not been exported')).nodeify(cb);
+        }
+
+        return readFromPath(PATH + '/gpio' + pin + '/value', 'utf-8')
+            .then(function (data) {
+                data = (data + '').trim() || '0';
+                debug('read pin %s with value %s', pin, data);
+                return (data === '1');
+            })
+            .then(function (readResult) {
+                if (params['type']) {
+                    params['value'] = readResult;
+                    return params;
+                } else {
+                    return readResult;
+                }
+            })
+            .nodeify(cb);
     };
 
     /**
