@@ -241,6 +241,30 @@ describe('rpi-gpio', function() {
                 });
             });
 
+            context('and direction is specified low-ward', function() {
+                beforeEach(function(done) {
+                    gpio.setup(7, gpio.DIR_LOW, done);
+                });
+
+                it('should set the channel direction', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[0], PATH + '/gpio7/direction');
+                    assert.equal(args[1], 'low');
+                });
+            });
+
+            context('and direction is specified high-ward', function() {
+                beforeEach(function(done) {
+                    gpio.setup(7, gpio.DIR_HIGH, done);
+                });
+
+                it ('should set the channel direction', function() {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[0], PATH + '/gpio7/direction');
+                    assert.equal(args[1], 'high');
+                });
+            });
+
             var edge_modes = ['none', 'rising', 'falling', 'both']
             edge_modes.forEach(function(edge_mode) {
                 var edgeConstant = 'EDGE_' + edge_mode.toUpperCase()
