@@ -34,7 +34,7 @@ Please note that there are two different and confusing ways to reference a chann
 #### setup(channel [, direction, edge], callback)
 Sets up a channel for read or write. Must be done before the channel can be used.
 * channel: Reference to the pin in the current mode's schema.
-* direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. You can also pass DIR_LOW or DIR_HIGH to use write mode with a specific initial "hot" state. Defaults to DIR_OUT.
+* direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. You can also pass DIR_LOW or DIR_HIGH to use the write mode and specify an initial state of 'off' or 'on' respectively. Defaults to DIR_OUT.
 * edge: Interrupt generating GPIO chip setting, pass in EDGE_NONE for no interrupts, EDGE_RISING for interrupts on rising values, EDGE_FALLING for interrupts on falling values or EDGE_BOTH for all interrupts.
 Defaults to EDGE_NONE.
 * callback: Provides Error as the first argument if an error occurred.
