@@ -1,4 +1,4 @@
-var gpio = require('rpi-gpio');
+var gpio = require('../../rpi-gpio');
 var async = require('async');
 var assert = require('assert');
 var sinon = require('sinon');
