@@ -90,6 +90,8 @@ function Gpio() {
 
     this.DIR_IN   = 'in';
     this.DIR_OUT  = 'out';
+    this.DIR_LOW  = 'low';
+    this.DIR_HIGH = 'high';
 
     this.MODE_RPI = 'mode_rpi';
     this.MODE_BCM = 'mode_bcm';
@@ -143,7 +145,7 @@ function Gpio() {
             });
         }
 
-        if (direction !== this.DIR_IN && direction !== this.DIR_OUT) {
+        if (direction !== this.DIR_IN && direction !== this.DIR_OUT && direction !== this.DIR_LOW && direction !== this.DIR_HIGH) {
             return process.nextTick(function() {
                 onSetup(new Error('Cannot set invalid direction'));
             });

@@ -34,7 +34,7 @@ Please note that there are two different and confusing ways to reference a chann
 #### setup(channel [, direction, edge], callback)
 Sets up a channel for read or write. Must be done before the channel can be used.
 * channel: Reference to the pin in the current mode's schema.
-* direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. Defaults to DIR_OUT.
+* direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. You can also pass DIR_LOW or DIR_HIGH to use the write mode and specify an initial state of 'off' or 'on' respectively. Defaults to DIR_OUT.
 * edge: Interrupt generating GPIO chip setting, pass in EDGE_NONE for no interrupts, EDGE_RISING for interrupts on rising values, EDGE_FALLING for interrupts on falling values or EDGE_BOTH for all interrupts.
 Defaults to EDGE_NONE.
 * callback: Provides Error as the first argument if an error occurred.
@@ -97,6 +97,23 @@ gpio.setup(7, gpio.DIR_OUT, write);
 
 function write() {
     gpio.write(7, true, function(err) {
+        if (err) throw err;
+        console.log('Written to pin');
+    });
+}
+```
+
+### Setup and write to a pin that starts as on
+This example shows how to setup the pin for write mode with the default state as
+"on". Why do this? It can sometimes be useful to reverse the default initial 
+state due to wiring or uncontrollable circumstances.
+```js
+var gpio = require('rpi-gpio');
+
+gpio.setup(7, gpio.DIR_HIGH, write);
+
+function write() {
+    gpio.write(7, false, function(err) {
         if (err) throw err;
         console.log('Written to pin');
     });
