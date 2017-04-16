@@ -6,6 +6,19 @@ Control Raspberry Pi GPIO pins with io.js / node.js
 [![Build Status](https://travis-ci.org/JamesBarwell/rpi-gpio.js.svg?branch=master)](https://travis-ci.org/JamesBarwell/rpi-gpio.js)
 [![NPM version](https://badge.fury.io/js/rpi-gpio.svg)](http://badge.fury.io/js/rpi-gpio)
 
+## Supported hardware
+
+* Raspberry Pi 1 Model A
+* Raspberry Pi 1 Model A+
+* Raspberry Pi 1 Model B
+* Raspberry Pi 1 Model B+
+
+### Unknown - please raise an issue to let us know if this works for you
+
+* Raspberry Pi 2 Model B
+* Raspberry Pi 3 Model B
+* Raspberry Pi Zero
+
 ## Setup
 See this guide on how to get [node.js running on Raspberry Pi](https://learn.adafruit.com/node-embedded-development/installing-node-dot-js).
 
