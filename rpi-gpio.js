@@ -4,6 +4,7 @@ var EventEmitter = require('events').EventEmitter;
 var async        = require('async');
 var debug        = require('debug')('rpi-gpio');
 var Epoll        = require('epoll').Epoll;
+var Promise      = require('promise');
 
 var PATH = '/sys/class/gpio';
 var PINS = {
