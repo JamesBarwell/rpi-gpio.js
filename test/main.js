@@ -283,6 +283,10 @@ describe('rpi-gpio', function() {
                 });
             });
 
+            context('and the edge fails to set first time', function() {
+                it('should try and set the edge again')
+            });
+
             context('and callback is specified', function() {
                 var callback;
 
