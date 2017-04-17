@@ -81,6 +81,15 @@ var PINS = {
     }
 };
 
+function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if ((new Date().getTime() - start) > milliseconds){
+      break;
+    }
+  }
+}
+
 function Gpio() {
     var currentPins;
     var exportedInputPins = {};
@@ -416,6 +425,7 @@ function setEdge(pin, edge, cb) {
 }
 
 function setDirection(pin, direction, cb) {
+    sleep(400);
     debug('set direction %s on pin %d', direction.toUpperCase(), pin);
     fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
         if (cb) return cb(err);
