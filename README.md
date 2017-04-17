@@ -12,10 +12,10 @@ Control Raspberry Pi GPIO pins with io.js / node.js
 * Raspberry Pi 1 Model A+
 * Raspberry Pi 1 Model B
 * Raspberry Pi 1 Model B+
+* Raspberry Pi 2 Model B
 
 ### Unknown - please raise an issue to let us know if this works for you
 
-* Raspberry Pi 2 Model B
 * Raspberry Pi 3 Model B
 * Raspberry Pi Zero
 
@@ -118,7 +118,7 @@ function write() {
 
 ### Setup and write to a pin that starts as on
 This example shows how to setup the pin for write mode with the default state as
-"on". Why do this? It can sometimes be useful to reverse the default initial 
+"on". Why do this? It can sometimes be useful to reverse the default initial
 state due to wiring or uncontrollable circumstances.
 ```js
 var gpio = require('rpi-gpio');
