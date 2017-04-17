@@ -1,7 +1,7 @@
 var assert = require('assert');
-var fs     = require('fs');
-var mocha  = require('mocha');
-var sinon  = require('sinon');
+var fs = require('fs');
+var mocha = require('mocha');
+var sinon = require('sinon');
 
 var sandbox;
 
@@ -10,7 +10,7 @@ var listeners = []
 
 // Stub epoll module
 epoll = {}
-require('epoll').Epoll = function(callback) {
+require('epoll').Epoll = function (callback) {
     callback(null, 'fakeFd2')
 
     var listener = {
@@ -50,7 +50,7 @@ describe('rpi-gpio', function() {
         gpio.version = 1;
     });
 
-    afterEach(function() {
+    afterEach(function () {
         sandbox.restore()
         listeners = []
     });
@@ -871,7 +871,7 @@ describe('rpi-gpio', function() {
                         var args = fs.readFile.lastCall.args;
                         assert.equal(args[0], PATH + '/gpio7/value');
                         promise.then(function (result) {
-                            assert.equal(result === true)
+                            assert.ok(result)
                         })
                     });
                 });
