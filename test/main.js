@@ -840,16 +840,20 @@ describe('rpi-gpio', function() {
 
                     invalidBcmPins.forEach(function(bcmPin) {
                         context('writing to invalid BCM pin ' + bcmPin, function() {
-                            var errValue = undefined;
+                            var callback;
 
-                            beforeEach(function() {
-                                gpio.setup(bcmPin, gpio.DIR_IN, function(err) {
-                                    errValue = err;
-                                });
+                            beforeEach(function(done) {
+                                callback = sandbox.spy(onSetupComplete);
+                                function onSetupComplete() {
+                                    done();
+                                }
+
+                                gpio.setup(bcmPin, gpio.DIR_IN, callback);
                             });
  
-                            it('should throw an error', function() {
-                                assert.throws(errValue, Error);
+                            it('should run the callback with an error', function() {
+                                sinon.assert.calledOnce(callback);
+                                assert.ok(callback.getCall(0).args[0]);
                             });
                         });
                     });
