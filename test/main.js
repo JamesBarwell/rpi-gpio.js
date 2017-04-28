@@ -98,7 +98,7 @@ describe('rpi-gpio', function() {
                     done();
                 }
 
-                gpio.setup(1, null, callback);
+                gpio.setup(2, null, callback);
             });
 
             it('should run the callback with an error', function() {
