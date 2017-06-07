@@ -17,11 +17,6 @@ Control Raspberry Pi GPIO pins with io.js / node.js
 * Raspberry Pi Zero
 * Raspberry Pi Zero W
 
-### Unknown - please raise an issue to let us know if this works for you
-
-* Raspberry Pi 3 Model B
-* Raspberry Pi Zero
-
 ## Setup
 See this guide on how to get [node.js running on Raspberry Pi](https://learn.adafruit.com/node-embedded-development/installing-node-dot-js).
 
