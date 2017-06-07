@@ -13,6 +13,9 @@ Control Raspberry Pi GPIO pins with io.js / node.js
 * Raspberry Pi 1 Model B
 * Raspberry Pi 1 Model B+
 * Raspberry Pi 2 Model B
+* Raspberry Pi 3 Model B
+* Raspberry Pi Zero
+* Raspberry Pi Zero W
 
 ### Unknown - please raise an issue to let us know if this works for you
 
