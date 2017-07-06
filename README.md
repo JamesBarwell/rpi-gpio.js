@@ -27,6 +27,8 @@ npm install rpi-gpio
 
 ### Dependency
 
+Please note that this module has a dependency on [epoll](https://github.com/fivdi/epoll) and that currently it is only possible to build and develop the module on Linux systems.
+
 If you are having trouble installing this module make sure you are running gcc/g++ `-v 4.8` or higher. [Here](https://github.com/fivdi/onoff/wiki/Node.js-v4-and-native-addons) is an installation guide.
 
 ## Usage
