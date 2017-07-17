@@ -98,7 +98,7 @@ describe('rpi-gpio', function() {
                     done();
                 }
 
-                gpio.setup(1, null, callback);
+                gpio.setup(28, null, callback);
             });
 
             it('should run the callback with an error', function() {
@@ -740,32 +740,7 @@ describe('rpi-gpio', function() {
             });
 
             var bcmPins = [
-                3,
-                5,
-                7,
-                8,
-                10,
-                11,
-                12,
-                13,
-                15,
-                16,
-                18,
-                19,
-                21,
-                22,
-                23,
-                24,
-                26,
-                29,
-                31,
-                32,
-                33,
-                35,
-                36,
-                37,
-                38,
-                40
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9,, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
             ];
 
             bcmPins.forEach(function(bcmPin) {
