@@ -1,7 +1,7 @@
 rpi-gpio.js
 ==========
 
-Control Raspberry Pi GPIO pins with io.js / node.js
+Control Raspberry Pi GPIO pins with node.js
 
 [![Build Status](https://travis-ci.org/JamesBarwell/rpi-gpio.js.svg?branch=master)](https://travis-ci.org/JamesBarwell/rpi-gpio.js)
 [![NPM version](https://badge.fury.io/js/rpi-gpio.svg)](http://badge.fury.io/js/rpi-gpio)
@@ -32,8 +32,6 @@ Please note that this module has a dependency on [epoll](https://github.com/fivd
 If you are having trouble installing this module make sure you are running gcc/g++ `-v 4.8` or higher. [Here](https://github.com/fivdi/onoff/wiki/Node.js-v4-and-native-addons) is an installation guide.
 
 ## Usage
-Firstly, make make sure you are running your application as root or with sudo, else the Raspberry Pi will not let you output to the GPIO.
-
 Before you can read or write, you must use setup() to open a channel, and must specify whether it will be used for input or output. Having done this, you can then read in the state of the channel or write a value to it using read() or write().
 
 All of the functions relating to the pin state within this module are asynchronous, so where necessary - for example in reading the value of a channel - a callback must be provided. This module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use its functions to listen to events.
