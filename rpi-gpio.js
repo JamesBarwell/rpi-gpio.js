@@ -84,6 +84,7 @@ var PINS = {
 
 function Gpio() {
     var currentPins;
+    var currentValidBcmPins;
     var exportedInputPins = {};
     var exportedOutputPins = {};
     var getPinForCurrentMode = getPinRpi;
@@ -307,6 +308,7 @@ function Gpio() {
         this.removeAllListeners();
 
         currentPins = undefined;
+        currentValidBcmPins = undefined;
         getPinForCurrentMode = getPinRpi;
         pollers = {}
     };
@@ -336,6 +338,16 @@ function Gpio() {
                 pinVersion
             );
 
+            // Create a list of valid BCM pins for this Raspberry Pi version.
+            // This will be used to validate channel numbers in getPinBcm
+            currentValidBcmPins = []
+            Object.keys(PINS[pinVersion]).forEach(
+              function(pin) {
+                // Lookup the BCM pin for the RPI pin and add it to the list
+                currentValidBcmPins.push(PINS[pinVersion][pin]);
+              }
+            );
+
             currentPins = PINS[pinVersion];
 
             return cb(null);
@@ -348,34 +360,7 @@ function Gpio() {
 
     function getPinBcm(channel) {
         channel = parseInt(channel, 10);
-        return [
-            3,
-            5,
-            7,
-            8,
-            10,
-            11,
-            12,
-            13,
-            15,
-            16,
-            18,
-            19,
-            21,
-            22,
-            23,
-            24,
-            26,
-            29,
-            31,
-            32,
-            33,
-            35,
-            36,
-            37,
-            38,
-            40
-        ].indexOf(channel) !== -1 ? (channel + '') : null;
+        return currentValidBcmPins.indexOf(channel) !== -1 ? (channel + '') : null;
     };
 
     /**

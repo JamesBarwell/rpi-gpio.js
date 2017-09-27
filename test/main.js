@@ -99,7 +99,7 @@ describe('rpi-gpio', function() {
                     done();
                 }
 
-                gpio.setup(1, null, callback);
+                gpio.setup(2, null, callback);
             });
 
             it('should run the callback with an error', function() {
@@ -740,45 +740,123 @@ describe('rpi-gpio', function() {
                 gpio.setMode(gpio.MODE_BCM);
             });
 
-            var bcmPins = [
-                3,
-                5,
-                7,
-                8,
-                10,
-                11,
-                12,
-                13,
-                15,
-                16,
-                18,
-                19,
-                21,
-                22,
-                23,
-                24,
-                26,
-                29,
-                31,
-                32,
-                33,
-                35,
-                36,
-                37,
-                38,
-                40
-            ];
+            var revisionMap = {
+                '0002': 'v1',
+                '0003': 'v1',
+                '0004': 'v2',
+                '0005': 'v2',
+                '0006': 'v2',
+                '0007': 'v2',
+                '0008': 'v2',
+                '0009': 'v2',
+                '000d': 'v2',
+                '000e': 'v2',
+                '000f': 'v2',
+                // Over-volted hardware
+                '10000003': 'v1',
+                '10000004': 'v2',
+                '1000000f': 'v2'
+            };
 
-            bcmPins.forEach(function(bcmPin) {
-                bcmPin += '';
+            var map = {
+                v1: {
+                    // RPI to BCM
+                    '3':  '0',
+                    '5':  '1',
+                    '7':  '4',
+                    '8':  '14',
+                    '10': '15',
+                    '11': '17',
+                    '12': '18',
+                    '13': '21',
+                    '15': '22',
+                    '16': '23',
+                    '18': '24',
+                    '19': '10',
+                    '21': '9',
+                    '22': '25',
+                    '23': '11',
+                    '24': '8',
+                    '26': '7'
+                },
+                v2: {
+                    // RPI to BCM
+                    '3':  '2',
+                    '5':  '3',
+                    '7':  '4',
+                    '8':  '14',
+                    '10': '15',
+                    '11': '17',
+                    '12': '18',
+                    '13': '27',
+                    '15': '22',
+                    '16': '23',
+                    '18': '24',
+                    '19': '10',
+                    '21': '9',
+                    '22': '25',
+                    '23': '11',
+                    '24': '8',
+                    '26': '7',
+                    '29': '5',
+                    '31': '6',
+                    '32': '12',
+                    '33': '13',
+                    '35': '19',
+                    '36': '16',
+                    '37': '26',
+                    '38': '20',
+                    '40': '21'
+                }
+            };
 
-                context('writing to BCM pin ' + bcmPin, function() {
-                    beforeEach(function(done) {
-                        gpio.setup(bcmPin, gpio.DIR_IN, done);
+            var invalidBcmPinsByVersion = {
+              v1: [2, 3, 5, 6, 12, 13, 16, 19, 20],
+              v2: [0, 1]
+            };
+
+            Object.keys(revisionMap).forEach(function(revision) {
+                var revisionSchema = revisionMap[revision];
+                var pinMap = map[revisionSchema];
+                var invalidBcmPins = invalidBcmPinsByVersion[revisionSchema];
+
+                context('and hardware revision is: ' + revision, function() {
+                    beforeEach(function() {
+                        fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo(revision));
                     });
 
-                    it('should write to the same pin ' + bcmPin + ' (BCM)', function() {
-                        assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
+                    Object.keys(pinMap).forEach(function(rpiPin) {
+                        var bcmPin = pinMap[rpiPin];
+
+                        context('writing to BCM pin ' + bcmPin, function() {
+                            beforeEach(function(done) {
+                                gpio.setup(bcmPin, gpio.DIR_IN, done);
+                            });
+
+                            it('should write to the same pin ' + bcmPin + ' (BCM)', function() {
+                                assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
+                            });
+                        });
+                    });
+
+                    invalidBcmPins.forEach(function(bcmPin) {
+                        context('writing to invalid BCM pin ' + bcmPin, function() {
+                            var callback;
+
+                            beforeEach(function(done) {
+                                callback = sandbox.spy(onSetupComplete);
+                                function onSetupComplete() {
+                                    done();
+                                }
+
+                                gpio.setup(bcmPin, gpio.DIR_IN, callback);
+                            });
+ 
+                            it('should run the callback with an error', function() {
+                                sinon.assert.calledOnce(callback);
+                                assert.ok(callback.getCall(0).args[0]);
+                            });
+                        });
                     });
                 });
             });
