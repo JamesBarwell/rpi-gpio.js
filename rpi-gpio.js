@@ -4,6 +4,7 @@ var EventEmitter = require('events').EventEmitter;
 var async        = require('async');
 var debug        = require('debug')('rpi-gpio');
 var Epoll        = require('epoll').Epoll;
+var Promise      = require('promise');
 
 var PATH = '/sys/class/gpio';
 var PINS = {
@@ -455,4 +456,76 @@ function clearInterrupt(fd) {
     fs.readSync(fd, new Buffer(1), 0, 1, 0);
 }
 
-module.exports = new Gpio;
+var GPIO = new Gpio();
+
+// Promise
+GPIO.promise = {
+
+    /**
+     * @see {@link Gpio.setup}
+     * @param channel
+     * @param direction
+     * @param edge
+     * @returns {Promise}
+     */
+    setup: function (channel, direction, edge) {
+        return new Promise(function (resolve, reject) {
+            function done(error) {
+                if (error) return reject(error);
+                resolve();
+            }
+
+            GPIO.setup(channel, direction, edge, done)
+        })
+    },
+
+    /**
+     * @see {@link Gpio.write}
+     * @param channel
+     * @param value
+     * @returns {Promise}
+     */
+    write: function (channel, value) {
+        return new Promise(function (resolve, reject) {
+            function done(error) {
+                if (error) return reject(error);
+                resolve();
+            }
+
+            GPIO.write(channel, value, done)
+        })
+    },
+
+    /**
+     * @see {@link Gpio.read}
+     * @param channel
+     * @returns {Promise}
+     */
+    read: function (channel) {
+        return new Promise(function (resolve, reject) {
+            function done(error, result) {
+                if (error) return reject(error);
+                resolve(result);
+            }
+
+            GPIO.read(channel, done)
+        })
+    },
+
+    /**
+     * @see {@link Gpio.destroy}
+     * @returns {Promise}
+     */
+    destroy: function () {
+        return new Promise(function (resolve, reject) {
+            function done(error) {
+                if (error) return reject(error);
+                resolve();
+            }
+
+            GPIO.destroy(done)
+        })
+    }
+};
+
+module.exports = GPIO;

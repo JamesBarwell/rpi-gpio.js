@@ -1,7 +1,7 @@
 var assert = require('assert');
-var fs     = require('fs');
-var mocha  = require('mocha');
-var sinon  = require('sinon');
+var fs = require('fs');
+var mocha = require('mocha');
+var sinon = require('sinon');
 
 var sandbox;
 
@@ -10,7 +10,7 @@ var listeners = []
 
 // Stub epoll module
 epoll = {}
-require('epoll').Epoll = function(callback) {
+require('epoll').Epoll = function (callback) {
     callback(null, 'fakeFd2')
 
     var listener = {
@@ -24,6 +24,7 @@ require('epoll').Epoll = function(callback) {
 
 // Only load module after Epoll is stubbed
 var gpio = require('../rpi-gpio.js');
+var gpioPromise = gpio.promise;
 
 var PATH = '/sys/class/gpio';
 
@@ -49,7 +50,7 @@ describe('rpi-gpio', function() {
         gpio.version = 1;
     });
 
-    afterEach(function() {
+    afterEach(function () {
         sandbox.restore()
         listeners = []
     });
@@ -784,4 +785,161 @@ describe('rpi-gpio', function() {
         });
     });
 
+    describe('promise', function () {
+        describe('setup()', function () {
+            context('when given an invalid channel', function () {
+                var callback;
+
+                beforeEach(function (done) {
+                    callback = sandbox.spy(onSetupComplete);
+                    function onSetupComplete() {
+                        done();
+                    }
+
+                    return gpioPromise.setup(null, null).catch(callback);
+                });
+
+                it('should run the callback with an error', function () {
+                    sinon.assert.calledOnce(callback);
+                    assert.ok(callback.getCall(0).args[0]);
+                });
+            });
+
+            context('when given a valid channel', function () {
+                var callback;
+
+                beforeEach(function (done) {
+                    callback = sandbox.spy(onSetupComplete);
+                    function onSetupComplete() {
+                        done();
+                    }
+
+                    return gpioPromise.setup(7).then(callback);
+                });
+
+                it('should run the callback successfully', function () {
+                    sinon.assert.calledOnce(callback);
+                });
+            });
+        });
+    });
+
+    describe('write()', function () {
+        context('when pin 7 has been setup for output', function () {
+            var onSetup;
+
+            beforeEach(function (done) {
+                onSetup = sandbox.spy(done);
+                return gpioPromise.setup(7, gpio.DIR_OUT).then(onSetup);
+            });
+
+            context('and pin 7 is written to with boolean true', function () {
+                beforeEach(function (done) {
+                    return gpioPromise.write(7, true).then(done);
+                });
+
+                it('should write the value to the file system', function () {
+                    var args = fs.writeFile.lastCall.args;
+                    assert.equal(args[0], PATH + '/gpio7/value');
+                    assert.equal(args[1], '1');
+
+                    sinon.assert.called(onSetup);
+                });
+            });
+        });
+    });
+
+    describe('read()', function () {
+        context('when pin 7 is setup for input', function () {
+            beforeEach(function () {
+                return gpioPromise.setup(7, gpio.DIR_IN);
+            });
+
+            context('and pin 7 is on', function () {
+                beforeEach(function () {
+                    fs.readFile.yieldsAsync(null, '1');
+                });
+
+                context('and pin 7 is read', function () {
+                    var promise;
+
+                    beforeEach(function () {
+                        promise = gpioPromise.read(7);
+                    });
+
+                    it('should run the callback with a value boolean true', function () {
+                        var args = fs.readFile.lastCall.args;
+                        assert.equal(args[0], PATH + '/gpio7/value');
+                        promise.then(function (result) {
+                            assert.ok(result)
+                        })
+                    });
+                });
+            });
+        });
+    });
+
+    describe('destroy', function () {
+        context('when pins 7, 8 and 10 have been exported', function () {
+            var unexportPath = PATH + '/unexport';
+
+            beforeEach(function (done) {
+                var i = 3;
+                [7, 8, 10].forEach(function (pin) {
+                    gpioPromise.setup(pin, gpio.DIR_IN).then(function () {
+                        if (--i === 0) {
+                            done()
+                        }
+                    });
+                });
+            });
+
+            it('should have created 3 listeners', function () {
+                assert.equal(listeners.length, 3)
+            });
+
+            context('and destroy() is run', function () {
+
+                beforeEach(function () {
+                    fs.writeFile.reset();
+                    return gpioPromise.destroy();
+                })
+
+                it('should unexport pin 7', function () {
+                    sinon.assert.calledWith(fs.writeFile, unexportPath, '7');
+                });
+
+                it('should unexport pin 8', function () {
+                    sinon.assert.calledWith(fs.writeFile, unexportPath, '8');
+                });
+
+                it('should unexport pin 10', function () {
+                    sinon.assert.calledWith(fs.writeFile, unexportPath, '10');
+                });
+
+                it('should unwatch pin 7', function () {
+                    var listener = listeners[0]
+                    sinon.assert.calledOnce(listener.remove)
+                    sinon.assert.calledWith(listener.remove, 'fakeFd')
+                    sinon.assert.calledOnce(listener.close)
+                });
+
+                it('should unwatch pin 8', function () {
+                    var listener = listeners[1]
+                    sinon.assert.calledOnce(listener.remove)
+                    sinon.assert.calledWith(listener.remove, 'fakeFd')
+                    sinon.assert.calledOnce(listener.close)
+                });
+
+                it('should unwatch pin 9', function () {
+                    var listener = listeners[2]
+                    sinon.assert.calledOnce(listener.remove)
+                    sinon.assert.calledWith(listener.remove, 'fakeFd')
+                    sinon.assert.calledOnce(listener.close)
+                });
+
+            });
+
+        });
+    });
 });
