@@ -3,6 +3,7 @@
   "version": "0.9.1",
   "description": "Control Raspberry Pi GPIO pins with node.js",
   "main": "rpi-gpio.js",
+  "types": "rpi-gpio.d.ts",  
   "keywords:": [
     "raspberry",
     "pi",
