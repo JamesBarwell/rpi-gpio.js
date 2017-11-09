@@ -93,8 +93,10 @@ var gpio = require('rpi-gpio');
 
 gpio.setup(7, gpio.DIR_IN, readInput);
 
-function readInput() {
+function readInput(err) {
+    if (err) throw err;
     gpio.read(7, function(err, value) {
+        if (err) throw err;
         console.log('The value is ' + value);
     });
 }
@@ -106,7 +108,8 @@ var gpio = require('rpi-gpio');
 
 gpio.setup(7, gpio.DIR_OUT, write);
 
-function write() {
+function write(err) {
+    if (err) throw err;
     gpio.write(7, true, function(err) {
         if (err) throw err;
         console.log('Written to pin');
@@ -123,7 +126,8 @@ var gpio = require('rpi-gpio');
 
 gpio.setup(7, gpio.DIR_HIGH, write);
 
-function write() {
+function write(err) {
+    if (err) throw err;
     gpio.write(7, false, function(err) {
         if (err) throw err;
         console.log('Written to pin');
