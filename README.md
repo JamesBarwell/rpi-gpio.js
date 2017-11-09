@@ -18,7 +18,7 @@ Control Raspberry Pi GPIO pins with node.js
 * Raspberry Pi Zero W
 
 ## Setup
-See this guide on how to get [node.js running on Raspberry Pi](https://learn.adafruit.com/node-embedded-development/installing-node-dot-js).
+See this guide on how to get [node.js running on Raspberry Pi](http://thisdavej.com/beginners-guide-to-installing-node-js-on-a-raspberry-pi/#install-node).
 
 This module can then be installed with npm:
 ```
@@ -26,7 +26,6 @@ npm install rpi-gpio
 ```
 
 ### Dependency
-
 Please note that this module has a dependency on [epoll](https://github.com/fivdi/epoll) and that currently it is only possible to build and develop the module on Linux systems.
 
 If you are having trouble installing this module make sure you are running gcc/g++ `-v 4.8` or higher. [Here](https://github.com/fivdi/onoff/wiki/Node.js-v4-and-native-addons) is an installation guide.
