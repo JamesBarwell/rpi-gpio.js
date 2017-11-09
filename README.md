@@ -36,7 +36,8 @@ Before you can read or write, you must use setup() to open a channel, and must s
 
 All of the functions relating to the pin state within this module are asynchronous, so where necessary - for example in reading the value of a channel - a callback must be provided. This module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use its functions to listen to events.
 
-Please note that there are two different and confusing ways to reference a channel; either using the Raspberry Pi or the BCM/SoC naming schema (sadly, neither of which match the physical pins!). This module supports both schemas, with Raspberry Pi being the default. Please see [this page](http://elinux.org/RPi_Low-level_peripherals) for more details.
+Please be aware that there are multiple ways of referring to the pins on the Raspberry Pi. The simplest way to use the module is refer to them by physical position, using the diagrams on [this page](http://elinux.org/RPi_Low-level_peripherals). So holding the Raspberry Pi such that the GPIO header runs down the upper-right side of the board, if you wished to address GPIO4 (which is in column 1 and row 4), you would setup pin 7.
+
 
 ## API
 
