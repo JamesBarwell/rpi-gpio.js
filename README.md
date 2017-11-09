@@ -38,7 +38,9 @@ All of the functions relating to the pin state within this module are asynchrono
 Please be aware that there are multiple ways of referring to the pins on the Raspberry Pi. The simplest way to use the module is refer to them by physical position, using the diagrams on [this page](http://elinux.org/RPi_Low-level_peripherals). So holding the Raspberry Pi such that the GPIO header runs down the upper-right side of the board, if you wished to address GPIO4 (which is in column 1 and row 4), you would setup pin 7.
 
 
-## API
+## API (Error-first)
+
+The default API uses the node-style error-first callbacks to perform asynchronous functions. Most of these methods take a callback, and that callback should check for an error in its first argument. It is important to check for an error after each command, else your code will continue to run and will likely fail in hard to understand ways.
 
 ### Methods
 
@@ -84,6 +86,26 @@ See Node [EventEmitter](http://nodejs.org/api/events.html) for documentation on 
 Emitted when the value of a channel changed
 * channel
 * value
+
+## API (Promises)
+
+This API exposes a Promises interface to the module. All of the same functions are available, but do not take callbacks and instead return a Promise.
+
+The Promises interface is available in the `promise` namespace, e.g.:
+
+```js
+var gpio = require('rpi-gpio')
+var gpiop = gpio.promise;
+
+gpiop.setup(7, gpio.DIR_IN)
+    .then(() => {
+        return gpiop.write(7, true)
+    })
+    .catch((err) => {
+        console.log('Error: ', err.toString())
+    })
+```
+
 
 ## Examples
 
