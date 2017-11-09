@@ -7,6 +7,14 @@ var message =
     'Please ensure that your Raspberry Pi is set up with with physical pins ' +
     '7 and 11 connected via a 1kΩ resistor (or similar) to make this test work'
 console.log(message)
+console.log('')
+console.log('|-----------------------------------...')
+console.log('|-  [02][04][06][08][10][12][14][16]...')
+console.log('|-  [01][03][05][07][09][11][13][15]...')
+console.log('|-                |      |          ...')
+console.log('|-                |-<1k>-|          ...')
+console.log('')
+
 
 var writePin = 7
 var readPin = 11
