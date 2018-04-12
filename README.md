@@ -35,7 +35,8 @@ Before you can read or write, you must use setup() to open a channel, and must s
 
 All of the functions relating to the pin state within this module are asynchronous, so where necessary - for example in reading the value of a channel - a callback must be provided. This module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use its functions to listen to events.
 
-Please be aware that there are multiple ways of referring to the pins on the Raspberry Pi. The simplest way to use the module is refer to them by physical position, using the diagrams on [this page](http://elinux.org/RPi_Low-level_peripherals). So holding the Raspberry Pi such that the GPIO header runs down the upper-right side of the board, if you wished to address GPIO4 (which is in column 1 and row 4), you would setup pin 7.
+### Pin naming
+Please be aware that there are multiple ways of referring to the pins on the Raspberry Pi. The simplest and default way to use the module is refer to them by physical position, using the diagrams on [this page](http://elinux.org/RPi_Low-level_peripherals). So holding the Raspberry Pi such that the GPIO header runs down the upper-right side of the board, if you wished to address GPIO4 (which is in column 1 and row 4), you would setup pin 7. If you wish instead to refer to the pins by their GPIO names (known as BCM naming), you can use the `setMode` command described in the API documentation below.
 
 ### Running without sudo
 This module will work without use of the `sudo` command, as long as the user running the node process belongs to the `gpio` group. You can check the current user's groups by running the command `groups`, or `groups <user>` for another user. If you are not already a member of the `gpio` group, you can add yourself or another user by running `sudo adduser <user> gpio`.
