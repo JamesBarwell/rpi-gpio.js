@@ -31,7 +31,7 @@ Please note that this module has a dependency on [epoll](https://github.com/fivd
 If you are having trouble installing this module make sure you are running gcc/g++ `-v 4.8` or higher. [Here](https://github.com/fivdi/onoff/wiki/Node.js-v4-and-native-addons) is an installation guide.
 
 ## Usage
-Before you can read or write, you must use setup() to open a channel, and must specify whether it will be used for input or output. Having done this, you can then read in the state of the channel or write a value to it using read() or write().
+Before you can read or write, you must use `setup()` to open a channel, and must specify whether it will be used for input or output. Having done this, you can then read in the state of the channel or write a value to it using `read()` or `write()`.
 
 All of the functions relating to the pin state within this module are asynchronous, so where necessary - for example in reading the value of a channel - a callback must be provided. This module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use its functions to listen to events.
 
@@ -287,7 +287,7 @@ function delayedWrite(pin, value, callback) {
 ```
 
 ## Contributing
-Contributions are appreciated, both in the form of bug reports and pull requests.
+Contributions are always appreciated, whether that's in the form of bug reports, pull requests or helping to diagnose bugs and help other users on the issues page.
 
 Due to the nature of this project it can be quite time-consuming to test against real hardware, so the automated test suite is all the more important. I will not accept any pull requests that cause the build to fail, and probably will not accept any that do not have corresponding test coverage.
 
