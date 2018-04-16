@@ -101,7 +101,7 @@ The Promises interface is available in the `promise` namespace, e.g.:
 var gpio = require('rpi-gpio')
 var gpiop = gpio.promise;
 
-gpiop.setup(7, gpio.DIR_IN)
+gpiop.setup(7, gpio.DIR_OUT)
     .then(() => {
         return gpiop.write(7, true)
     })
