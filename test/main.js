@@ -36,7 +36,7 @@ function getCpuInfo(revision) {
 describe('rpi-gpio', function() {
 
     beforeEach(function() {
-        sandbox = sinon.sandbox.create()
+        sandbox = sinon.createSandbox()
 
         sandbox.stub(fs, 'writeFile').yieldsAsync();
         sandbox.stub(fs, 'exists').yieldsAsync(false);
@@ -851,7 +851,7 @@ describe('rpi-gpio', function() {
 
                                 gpio.setup(bcmPin, gpio.DIR_IN, callback);
                             });
- 
+
                             it('should run the callback with an error', function() {
                                 sinon.assert.calledOnce(callback);
                                 assert.ok(callback.getCall(0).args[0]);
@@ -874,7 +874,7 @@ describe('rpi-gpio', function() {
                         done();
                     }
 
-                    return gpioPromise.setup(null, null).catch(callback);
+                    gpioPromise.setup(null, null).catch(callback);
                 });
 
                 it('should run the callback with an error', function () {
@@ -892,7 +892,7 @@ describe('rpi-gpio', function() {
                         done();
                     }
 
-                    return gpioPromise.setup(7).then(callback);
+                    gpioPromise.setup(7).then(callback);
                 });
 
                 it('should run the callback successfully', function () {
@@ -908,12 +908,12 @@ describe('rpi-gpio', function() {
 
             beforeEach(function (done) {
                 onSetup = sandbox.spy(done);
-                return gpioPromise.setup(7, gpio.DIR_OUT).then(onSetup);
+                gpioPromise.setup(7, gpio.DIR_OUT).then(onSetup);
             });
 
             context('and pin 7 is written to with boolean true', function () {
                 beforeEach(function (done) {
-                    return gpioPromise.write(7, true).then(done);
+                    gpioPromise.write(7, true).then(done);
                 });
 
                 it('should write the value to the file system', function () {
@@ -978,9 +978,9 @@ describe('rpi-gpio', function() {
 
             context('and destroy() is run', function () {
 
-                beforeEach(function () {
+                beforeEach(function (done) {
                     fs.writeFile.reset();
-                    return gpioPromise.destroy();
+                    gpioPromise.destroy().then(done);
                 })
 
                 it('should unexport pin 7', function () {
