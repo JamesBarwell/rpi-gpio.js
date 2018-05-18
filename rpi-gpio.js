@@ -438,7 +438,7 @@ function removeListener(pin, pollers) {
 }
 
 function clearInterrupt(fd) {
-    fs.readSync(fd, new Buffer(1), 0, 1, 0);
+    fs.readSync(fd, Buffer.alloc(1), 0, 1, 0);
 }
 
 var GPIO = new Gpio();
