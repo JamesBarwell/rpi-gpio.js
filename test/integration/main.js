@@ -4,7 +4,7 @@ var assert = require('assert');
 var sinon = require('sinon');
 
 var message =
-    'Please ensure that your Raspberry Pi is set up with with physical pins ' +
+    'Please ensure that your Raspberry Pi is set up with physical pins ' +
     '7 and 11 connected via a 1kΩ resistor (or similar) to make this test work'
 console.log(message)
 console.log('')
