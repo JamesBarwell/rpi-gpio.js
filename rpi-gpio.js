@@ -165,28 +165,40 @@ function Gpio() {
 
         var pinForSetup;
         async.waterfall([
-            setRaspberryVersion,
+            function(next) {
+                setRaspberryVersion()
+                    .then(function() { next() })
+                    .catch(next);
+            },
             function(next) {
                 pinForSetup = getPinForCurrentMode(channel);
                 if (!pinForSetup) {
                     return next(new Error('Channel ' + channel + ' does not map to a GPIO pin'));
                 }
                 debug('set up pin %d', pinForSetup);
-                isExported(pinForSetup, next);
+                isExported(pinForSetup)
+                    .then(function(isExported) { next(null, isExported) })
+                    .catch(next);
             },
             function(isExported, next) {
                 if (isExported) {
-                    return unexportPin(pinForSetup, next);
+                    return unexportPin(pinForSetup)
+                        .then(function() { next(null) })
+                        .catch(next);
                 }
                 return next(null);
             },
             function(next) {
-                exportPin(pinForSetup, next);
+                exportPin(pinForSetup)
+                    .then(function() { next() })
+                    .catch(next);
             },
             function(next) {
               async.retry({times: 100, interval: 10},
                 function(cb){
-                  setEdge(pinForSetup, edge, cb);
+                  setEdge(pinForSetup, edge)
+                    .then(function() { next() })
+                    .catch(next);
                 },
                 function(err){
                   // wrapped here because waterfall can't handle positive result
@@ -202,7 +214,9 @@ function Gpio() {
 
                 async.retry({times: 100, interval: 10},
                   function(cb) {
-                    setDirection(pinForSetup, direction, cb);
+                    setDirection(pinForSetup, direction)
+                        .then(function() { next() })
+                        .catch(next);
                   },
                   function(err) {
                     // wrapped here because waterfall can't handle positive result
@@ -289,13 +303,21 @@ function Gpio() {
         var tasks = Object.keys(exportedOutputPins)
             .concat(Object.keys(exportedInputPins))
             .map(function(pin) {
-                return function(done) {
+                return new Promise(function(resolve, reject) {
                     removeListener(pin, pollers)
-                    unexportPin(pin, done);
-                }
+                    unexportPin(pin)
+                        .then(resolve)
+                        .catch(reject);
+                });
             });
 
-        async.parallel(tasks, cb);
+        Promise.all(tasks)
+            .then(function() {
+                return cb();
+            })
+            .catch(function(err) {
+                return cb(err);
+            });
     };
 
     /**
@@ -318,38 +340,42 @@ function Gpio() {
 
 
     // Private functions requring access to state
-    function setRaspberryVersion(cb) {
+    function setRaspberryVersion() {
         if (currentPins) {
-            return cb(null);
+            return Promise.resolve();
         }
 
-        fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
-            if (err) return cb(err);
+        return new Promise(function(resolve, reject) {
+            fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
+                if (err) {
+                    return reject(err);
+                }
 
-            // Match the last 4 digits of the number following "Revision:"
-            var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
-            var revisionNumber = parseInt(match[1], 16);
-            var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
+                // Match the last 4 digits of the number following "Revision:"
+                var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+                var revisionNumber = parseInt(match[1], 16);
+                var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
 
-            debug(
-                'seen hardware revision %d; using pin mode %s',
-                revisionNumber,
-                pinVersion
-            );
+                debug(
+                    'seen hardware revision %d; using pin mode %s',
+                    revisionNumber,
+                    pinVersion
+                );
 
-            // Create a list of valid BCM pins for this Raspberry Pi version.
-            // This will be used to validate channel numbers in getPinBcm
-            currentValidBcmPins = []
-            Object.keys(PINS[pinVersion]).forEach(
-              function(pin) {
-                // Lookup the BCM pin for the RPI pin and add it to the list
-                currentValidBcmPins.push(PINS[pinVersion][pin]);
-              }
-            );
+                // Create a list of valid BCM pins for this Raspberry Pi version.
+                // This will be used to validate channel numbers in getPinBcm
+                currentValidBcmPins = []
+                Object.keys(PINS[pinVersion]).forEach(
+                  function(pin) {
+                    // Lookup the BCM pin for the RPI pin and add it to the list
+                    currentValidBcmPins.push(PINS[pinVersion][pin]);
+                  }
+                );
 
-            currentPins = PINS[pinVersion];
+                currentPins = PINS[pinVersion];
 
-            return cb(null);
+                return resolve();
+            });
         });
     };
 
@@ -393,37 +419,59 @@ function Gpio() {
 }
 util.inherits(Gpio, EventEmitter);
 
-function setEdge(pin, edge, cb) {
+function setEdge(pin, edge) {
     debug('set edge %s on pin %d', edge.toUpperCase(), pin);
-    fs.writeFile(PATH + '/gpio' + pin + '/edge', edge, function(err) {
-        if (cb) return cb(err);
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PATH + '/gpio' + pin + '/edge', edge, function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
     });
 }
 
-function setDirection(pin, direction, cb) {
+function setDirection(pin, direction) {
     debug('set direction %s on pin %d', direction.toUpperCase(), pin);
-    fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
-        if (cb) return cb(err);
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
     });
 }
 
-function exportPin(pin, cb) {
+function exportPin(pin) {
     debug('export pin %d', pin);
-    fs.writeFile(PATH + '/export', pin, function(err) {
-        if (cb) return cb(err);
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PATH + '/export', pin, function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
     });
 }
 
-function unexportPin(pin, cb) {
+function unexportPin(pin) {
     debug('unexport pin %d', pin);
-    fs.writeFile(PATH + '/unexport', pin, function(err) {
-        if (cb) return cb(err);
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PATH + '/unexport', pin, function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
     });
 }
 
-function isExported(pin, cb) {
-    fs.exists(PATH + '/gpio' + pin, function(exists) {
-        return cb(null, exists);
+function isExported(pin) {
+    return new Promise(function(resolve, reject) {
+        fs.exists(PATH + '/gpio' + pin, function(exists) {
+            return resolve(exists);
+        });
     });
 }
 
