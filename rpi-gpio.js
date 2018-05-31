@@ -164,66 +164,67 @@ function Gpio() {
         }
 
         var pinForSetup;
-        async.waterfall([
-            function(next) {
-                setRaspberryVersion()
-                    .then(function() { next() })
-                    .catch(next);
-            },
-            function(next) {
+
+        setRaspberryVersion()
+            .then(function() {
                 pinForSetup = getPinForCurrentMode(channel);
                 if (!pinForSetup) {
-                    return next(new Error('Channel ' + channel + ' does not map to a GPIO pin'));
+                    throw new Error('Channel ' + channel + ' does not map to a GPIO pin');
                 }
                 debug('set up pin %d', pinForSetup);
-                isExported(pinForSetup)
-                    .then(function(isExported) { next(null, isExported) })
-                    .catch(next);
-            },
-            function(isExported, next) {
+                return isExported(pinForSetup)
+            })
+            .then(function(isExported) {
                 if (isExported) {
-                    return unexportPin(pinForSetup)
-                        .then(function() { next(null) })
-                        .catch(next);
+                    return unexportPin(pinForSetup);
                 }
-                return next(null);
-            },
-            function(next) {
-                exportPin(pinForSetup)
-                    .then(function() { next() })
-                    .catch(next);
-            },
-            function(next) {
-              async.retry({times: 100, interval: 10},
-                function(cb){
-                  setEdge(pinForSetup, edge)
-                    .then(function() { next() })
-                    .catch(next);
-                },
-                function(err){
-                  // wrapped here because waterfall can't handle positive result
-                  next(err);
+            })
+            .then(function() {
+                return exportPin(pinForSetup);
+            })
+            .then(function() {
+                return new Promise(function(resolve, reject) {
+                    async.retry(
+                        {times: 100, interval: 10},
+                        function(cb){
+                            setEdge(pinForSetup, edge)
+                                .then(cb)
+                                .catch(cb);
+                        },
+                        function(err){
+                            if (err) {
+                                return reject(err);
+                            }
+                            return resolve();
+                        }
+                    );
                 });
-            },
-            function(next) {
+            })
+            .then(function() {
                 if (direction === this.DIR_IN) {
                     exportedInputPins[pinForSetup] = true;
                 } else {
                     exportedOutputPins[pinForSetup] = true;
                 }
 
-                async.retry({times: 100, interval: 10},
-                  function(cb) {
-                    setDirection(pinForSetup, direction)
-                        .then(function() { next() })
-                        .catch(next);
-                  },
-                  function(err) {
-                    // wrapped here because waterfall can't handle positive result
-                    next(err);
-                  });
-            }.bind(this),
-            function(next) {
+                return new Promise(function(resolve, reject) {
+                    async.retry(
+                        {times: 100, interval: 10},
+                        function(cb) {
+                            setDirection(pinForSetup, direction)
+                                .then(cb)
+                                .catch(cb);
+                        },
+                        function(err) {
+                            if (err) {
+                                return reject(err);
+                            }
+                            return resolve();
+                        }
+                    );
+                });
+            }.bind(this))
+            .then(function() {
                 listen(channel, function(readChannel) {
                     this.read(readChannel, function(err, value) {
                         if (err) {
@@ -237,9 +238,13 @@ function Gpio() {
                         this.emit('change', readChannel, value);
                     }.bind(this));
                 }.bind(this));
-                next()
-            }.bind(this)
-        ], onSetup);
+            }.bind(this))
+            .then(function() {
+                onSetup();
+            })
+            .catch(function(err) {
+                onSetup(err);
+            });
     };
 
     /**
