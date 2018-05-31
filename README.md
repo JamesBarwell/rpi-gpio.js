@@ -17,6 +17,17 @@ Control Raspberry Pi GPIO pins with node.js
 * Raspberry Pi Zero
 * Raspberry Pi Zero W
 
+## Supported node versions
+
+| node version | rpi-gpio 1.x | rpio-gpio 2.x |
+| ------------ | ------------ | ------------- |
+| 0.10         | Yes          | No            |
+| 0.12         | Yes          | No            |
+| 4            | Yes          | Yes           |
+| 6            | Yes          | Yes           |
+| 8            | Yes          | Yes           |
+| 10           | No           | Yes           |
+
 ## Setup
 See this guide on how to get [node.js running on Raspberry Pi](http://thisdavej.com/beginners-guide-to-installing-node-js-on-a-raspberry-pi/#install-node).
 
