@@ -13,9 +13,9 @@
     "integration": "integration"
   },
   "devDependencies": {
-    "mocha": "~1.18.2",
-    "sinon": "~1.9.0",
-    "istanbul": "~0.2.7"
+    "mocha": "1.18.2",
+    "sinon": "1.9.0",
+    "istanbul": "0.2.7"
   },
   "scripts": {
     "test": "mocha",
@@ -31,9 +31,9 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
-    "async": "1.x",
-    "debug": "2.x",
-    "epoll": "0.1.x",
+    "async": "1.5.2",
+    "debug": "2.6.9",
+    "epoll": "0.1.22",
     "promise": "7.1.1"
   }
 }
