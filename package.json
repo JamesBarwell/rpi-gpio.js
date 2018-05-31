@@ -31,7 +31,7 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
-    "async": "^2.6.0",
+    "async-retry": "^1.2.1",
     "debug": "^3.1.0",
     "epoll": "^2.0.3"
   }

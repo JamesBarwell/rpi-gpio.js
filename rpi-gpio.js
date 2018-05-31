@@ -1,7 +1,7 @@
 var fs           = require('fs');
 var util         = require('util');
 var EventEmitter = require('events').EventEmitter;
-var async        = require('async');
+var retry        = require('async-retry');
 var debug        = require('debug')('rpi-gpio');
 var Epoll        = require('epoll').Epoll;
 
@@ -80,6 +80,12 @@ var PINS = {
         '40': 21
     }
 };
+
+var RETRY_OPTS = {
+    retries: 100,
+    minTimeout: 10,
+    factor: 1
+}
 
 function Gpio() {
     var currentPins;
@@ -183,22 +189,9 @@ function Gpio() {
                 return exportPin(pinForSetup);
             })
             .then(function() {
-                return new Promise(function(resolve, reject) {
-                    async.retry(
-                        {times: 100, interval: 10},
-                        function(cb){
-                            setEdge(pinForSetup, edge)
-                                .then(cb)
-                                .catch(cb);
-                        },
-                        function(err){
-                            if (err) {
-                                return reject(err);
-                            }
-                            return resolve();
-                        }
-                    );
-                });
+                return retry(function() {
+                    return setEdge(pinForSetup, edge);
+                }, RETRY_OPTS);
             })
             .then(function() {
                 if (direction === this.DIR_IN) {
@@ -207,22 +200,9 @@ function Gpio() {
                     exportedOutputPins[pinForSetup] = true;
                 }
 
-                return new Promise(function(resolve, reject) {
-                    async.retry(
-                        {times: 100, interval: 10},
-                        function(cb) {
-                            setDirection(pinForSetup, direction)
-                                .then(cb)
-                                .catch(cb);
-                        },
-                        function(err) {
-                            if (err) {
-                                return reject(err);
-                            }
-                            return resolve();
-                        }
-                    );
-                });
+                return retry(function() {
+                    return setDirection(pinForSetup, direction)
+                }, RETRY_OPTS);
             }.bind(this))
             .then(function() {
                 listen(channel, function(readChannel) {
