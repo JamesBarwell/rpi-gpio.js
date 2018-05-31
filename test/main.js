@@ -544,7 +544,6 @@ describe('rpi-gpio', function() {
 
       context('and destroy() is run', function() {
         beforeEach(function(done) {
-          fs.writeFile.reset();
           gpio.destroy(done);
         });
 
@@ -970,7 +969,6 @@ describe('rpi-gpio', function() {
 
       context('and destroy() is run', function() {
         beforeEach(function(done) {
-          fs.writeFile.reset();
           gpioPromise.destroy().then(done);
         });
 
