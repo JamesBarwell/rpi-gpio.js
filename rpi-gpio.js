@@ -87,6 +87,19 @@ var RETRY_OPTS = {
     factor: 1
 }
 
+var DIR_IN   = 'in';
+var DIR_OUT  = 'out';
+var DIR_LOW  = 'low';
+var DIR_HIGH = 'high';
+
+var MODE_RPI = 'mode_rpi';
+var MODE_BCM = 'mode_bcm';
+
+var EDGE_NONE    = 'none';
+var EDGE_RISING  = 'rising';
+var EDGE_FALLING = 'falling';
+var EDGE_BOTH    = 'both';
+
 function Gpio() {
     var currentPins;
     var currentValidBcmPins;
@@ -95,18 +108,18 @@ function Gpio() {
     var getPinForCurrentMode = getPinRpi;
     var pollers = {};
 
-    this.DIR_IN   = 'in';
-    this.DIR_OUT  = 'out';
-    this.DIR_LOW  = 'low';
-    this.DIR_HIGH = 'high';
+    this.DIR_IN   = DIR_IN;
+    this.DIR_OUT  = DIR_OUT;
+    this.DIR_LOW  = DIR_LOW;
+    this.DIR_HIGH = DIR_HIGH;
 
-    this.MODE_RPI = 'mode_rpi';
-    this.MODE_BCM = 'mode_bcm';
+    this.MODE_RPI = MODE_RPI;
+    this.MODE_BCM = MODE_BCM;
 
-    this.EDGE_NONE    = 'none';
-    this.EDGE_RISING  = 'rising';
-    this.EDGE_FALLING = 'falling';
-    this.EDGE_BOTH    = 'both';
+    this.EDGE_NONE    = EDGE_NONE;
+    this.EDGE_RISING  = EDGE_RISING;
+    this.EDGE_FALLING = EDGE_FALLING;
+    this.EDGE_BOTH    = EDGE_BOTH;
 
     /**
      * Set pin reference mode. Defaults to 'mode_rpi'.
@@ -152,7 +165,11 @@ function Gpio() {
             });
         }
 
-        if (direction !== this.DIR_IN && direction !== this.DIR_OUT && direction !== this.DIR_LOW && direction !== this.DIR_HIGH) {
+        if (direction !== this.DIR_IN &&
+            direction !== this.DIR_OUT &&
+            direction !== this.DIR_LOW &&
+            direction !== this.DIR_HIGH
+        ) {
             return process.nextTick(function() {
                 onSetup(new Error('Cannot set invalid direction'));
             });
@@ -171,11 +188,31 @@ function Gpio() {
 
         var pinForSetup;
 
+        var onListen = function(readChannel) {
+            this.read(readChannel, function(err, value) {
+                if (err) {
+                    debug(
+                        'Error reading channel value after change, %d',
+                        readChannel
+                    );
+                    return
+                }
+                debug(
+                    'emitting change on channel %s with value %s',
+                    readChannel,
+                    value
+                );
+                this.emit('change', readChannel, value);
+            }.bind(this));
+        }.bind(this);
+
         setRaspberryVersion()
             .then(function() {
                 pinForSetup = getPinForCurrentMode(channel);
                 if (!pinForSetup) {
-                    throw new Error('Channel ' + channel + ' does not map to a GPIO pin');
+                    throw new Error(
+                        'Channel ' + channel + ' does not map to a GPIO pin'
+                    );
                 }
                 debug('set up pin %d', pinForSetup);
                 return isExported(pinForSetup)
@@ -194,7 +231,7 @@ function Gpio() {
                 }, RETRY_OPTS);
             })
             .then(function() {
-                if (direction === this.DIR_IN) {
+                if (direction === DIR_IN) {
                     exportedInputPins[pinForSetup] = true;
                 } else {
                     exportedOutputPins[pinForSetup] = true;
@@ -203,22 +240,10 @@ function Gpio() {
                 return retry(function() {
                     return setDirection(pinForSetup, direction)
                 }, RETRY_OPTS);
-            }.bind(this))
+            })
             .then(function() {
-                listen(channel, function(readChannel) {
-                    this.read(readChannel, function(err, value) {
-                        if (err) {
-                            debug(
-                                'Error reading channel value after change, %d',
-                                readChannel
-                            );
-                            return
-                        }
-                        debug('emitting change on channel %s with value %s', readChannel, value);
-                        this.emit('change', readChannel, value);
-                    }.bind(this));
-                }.bind(this));
-            }.bind(this))
+                listen(channel, onListen);
+            })
             .then(function() {
                 onSetup();
             })
