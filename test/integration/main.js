@@ -1,5 +1,5 @@
 var gpio = require('../../rpi-gpio');
-var async = require('async');
+var gpio_p = gpio.promise;
 var assert = require('assert');
 var sinon = require('sinon');
 
@@ -15,7 +15,6 @@ console.log('|-                |      |          ...')
 console.log('|-                |-<1k>-|          ...')
 console.log('')
 
-
 var writePin = 7
 var readPin = 11
 
@@ -27,28 +26,28 @@ describe('rpi-gpio integration', function() {
     before(function(done) {
         gpio.on('change', onChange);
 
-        async.waterfall([
-            function(next) {
-                gpio.setup(writePin, gpio.DIR_OUT, next)
-            },
-            function(next) {
-                gpio.setup(readPin, gpio.DIR_IN, gpio.EDGE_BOTH, next)
-            },
-            function(next) {
-                gpio.write(writePin, 1, next);
-            },
-            function(next) {
-                setTimeout(next, 100)
-            },
-            function(next) {
-                gpio.read(readPin, function(err, value) {
-                    readValue = value;
-                    next();
-                });
-            }
-        ], function(err) {
+        gpio_p.setup(writePin, gpio.DIR_OUT)
+          .then(() => {
+            return gpio_p.setup(readPin, gpio.DIR_IN, gpio.EDGE_BOTH)
+          })
+          .then(() => {
+            return gpio_p.write(writePin, 1)
+          })
+          .then(() => {
+            setTimeout(function() {
+	      return Promise.resolve()
+	    },100)
+          })
+          .then(() => {
+            return gpio_p.read(readPin)
+          })
+          .then((value) => {
+            readValue = value;
+            done()
+          })
+          .catch((err) => {
             done(err)
-        });
+          })
     });
 
     after(function(done) {
