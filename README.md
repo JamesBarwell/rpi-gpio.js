@@ -127,7 +127,9 @@ gpiop.setup(7, gpio.DIR_OUT)
 
 ## Examples
 
-Please see the `examples` directory.
+See the `examples` directory included in this project.
+
+Please note that all examples are intended to be directly runnable from the code repository, so they always require the module in at the top using `var gpio = require(../rpi-gpio)`. In reality, you will want to include the module using `var gpio = require('rpi-gpio')`
 
 ## Contributing
 Contributions are always appreciated, whether that's in the form of bug reports, pull requests or helping to diagnose bugs and help other users on the issues page.

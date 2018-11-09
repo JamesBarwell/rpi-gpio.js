@@ -1,5 +1,5 @@
 //This example shows how to set up a channel for output mode. After it is set up, it executes a callback which in turn calls another, causing the voltage to alternate up and down three times.
-var gpio = require('rpi-gpio');
+var gpio = require('../rpi-gpio');
 
 var writePin = 7;
 var readPin = 11;
