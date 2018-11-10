@@ -92,7 +92,7 @@ Alias of read().
 Alias of write().
 
 #### destroy()
-Tears down any previously set up channels.
+Tears down any previously set up channels. Should be run when your program stops, or needs to reset the state of the pins.
 
 #### reset()
 Tears down the module state - used for testing.
