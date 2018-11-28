@@ -365,7 +365,8 @@ function Gpio() {
                 var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
 
                 if (!match) {
-                    return reject('Unable to match Revision in /proc/cpuinfo')
+                    var errorMessage = 'Unable to match Revision in /proc/cpuinfo: ' + data;
+                    return reject(new Error(errorMessage));
                 }
 
                 var revisionNumber = parseInt(match[1], 16);
