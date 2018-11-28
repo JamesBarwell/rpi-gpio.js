@@ -879,6 +879,24 @@ describe('rpi-gpio', function() {
                     sinon.assert.calledOnce(callback);
                 });
             });
+
+            context('when CPU revision is invalid', function () {
+                var catchCallback;
+
+                beforeEach(function (done) {
+                    catchCallback = sandbox.spy(onSetupComplete);
+                    fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo('A Bad Revision'));
+                    function onSetupComplete() {
+                        done();
+                    }
+
+                    gpioPromise.setup(7).catch(catchCallback);
+                });
+
+                it('should catch the error successfully', function () {
+                    sinon.assert.calledOnce(catchCallback);
+                });
+            });
         });
     });
 

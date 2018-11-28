@@ -363,6 +363,11 @@ function Gpio() {
 
                 // Match the last 4 digits of the number following "Revision:"
                 var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+
+                if (!match) {
+                    return reject('Unable to match Revision in /proc/cpuinfo')
+                }
+
                 var revisionNumber = parseInt(match[1], 16);
                 var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
 
