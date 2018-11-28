@@ -880,21 +880,22 @@ describe('rpi-gpio', function() {
                 });
             });
 
-            context('when CPU revision is invalid', function () {
-                var catchCallback;
+            context('when CPU revision is unrecognised', function () {
+                var callback;
 
                 beforeEach(function (done) {
-                    catchCallback = sandbox.spy(onSetupComplete);
-                    fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo('A Bad Revision'));
+                    fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo('unexpected cpu info'));
+
+                    callback = sandbox.spy(onSetupComplete);
                     function onSetupComplete() {
                         done();
                     }
 
-                    gpioPromise.setup(7).catch(catchCallback);
+                    gpioPromise.setup(7).then(callback);
                 });
 
-                it('should catch the error successfully', function () {
-                    sinon.assert.calledOnce(catchCallback);
+                it('should run the callback successfully', function () {
+                    sinon.assert.calledOnce(callback);
                 });
             });
         });
