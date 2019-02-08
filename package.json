@@ -13,9 +13,9 @@
     "integration": "integration"
   },
   "devDependencies": {
+    "istanbul": "^0.4.5",
     "mocha": "^5.1.1",
-    "sinon": "^5.0.7",
-    "istanbul": "^0.4.5"
+    "sinon": "^5.1.1"
   },
   "scripts": {
     "test": "mocha",
