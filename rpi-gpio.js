@@ -384,14 +384,6 @@ function Gpio() {
                 }
             })
             .then(function() {
-                return isPWMEnabled();
-            })
-            .then(function(isPWMEnabled) {
-                if (!isPWMEnabled) {
-                    return enablePWM();
-                }
-            })
-            .then(function() {
                 return retry(function() {
                     return setPWMPeriod(period);
                 }, RETRY_OPTS);
@@ -406,6 +398,14 @@ function Gpio() {
             })
             .catch(function(err) {
                 onPWM(err);
+            })
+            .then(function() {
+                return isPWMEnabled();
+            })
+            .then(function(isPWMEnabled) {
+                if (!isPWMEnabled) {
+                    return enablePWM();
+                }
             });
     };
 
@@ -580,7 +580,7 @@ function exportPWM() {
 function unexportPWM() {
     debug('unexport PWM');
     return new Promise(function(resolve, reject) {
-        fs.writeFile(PWM_PATH + '/unexport', pin, function(err) {
+        fs.writeFile(PWM_PATH + '/unexport', '0', function(err) {
             if (err) {
                 return reject(err);
             }
@@ -615,7 +615,7 @@ function disablePWM() {
 
 function isPWMExported() {
     return new Promise(function(resolve, reject) {
-        fs.exists(PWM_PATH, function(exists) {
+        fs.exists(PWM_PATH + '/pwm0', function(exists) {
             return resolve(exists);
         });
     });
@@ -625,9 +625,9 @@ function isPWMEnabled() {
     return new Promise(function(resolve, reject) {
         fs.readFile(PWM_PATH + '/pwm0/enable', 'utf-8', function(err, data) {
             if (err) {
-                return cb(err)
+                return reject(err)
             }
-            return resolve (data = '1');
+            return resolve (data == '1');
         });
     });
 }
