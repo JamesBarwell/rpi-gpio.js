@@ -14,8 +14,8 @@
   },
   "devDependencies": {
     "istanbul": "^0.4.5",
-    "mocha": "^5.1.1",
-    "sinon": "^5.1.1"
+    "mocha": "^5.2.0",
+    "sinon": "^7.4.2"
   },
   "scripts": {
     "test": "mocha",
@@ -33,6 +33,6 @@
   "dependencies": {
     "async-retry": "^1.2.1",
     "debug": "^3.1.0",
-    "epoll": "^2.0.3"
+    "epoll": "^2.0.9"
   }
 }
