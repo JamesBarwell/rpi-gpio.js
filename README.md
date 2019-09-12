@@ -29,6 +29,7 @@ rpi-gpio 1.x is no longer supported. Please use 2.x unless you need to run with 
 | 6            | Yes          | Yes            |
 | 8            | Yes          | Yes            |
 | 10           | No           | Yes            |
+| 12           | No           | Yes            |
 
 ## Setup and install
 
