@@ -349,7 +349,7 @@ function Gpio() {
     this.reset();
 
 
-    // Private functions requring access to state
+    // Private functions requiring access to state
     function setRaspberryVersion() {
         if (currentPins) {
             return Promise.resolve();
@@ -508,6 +508,18 @@ var GPIO = new Gpio();
 
 // Promise
 GPIO.promise = {
+    DIR_IN: DIR_IN,
+    DIR_OUT: DIR_OUT,
+    DIR_LOW: DIR_LOW,
+    DIR_HIGH: DIR_HIGH,
+
+    MODE_RPI: MODE_RPI,
+    MODE_BCM: MODE_BCM,
+
+    EDGE_NONE: EDGE_NONE,
+    EDGE_RISING: EDGE_RISING,
+    EDGE_FALLING: EDGE_FALLING,
+    EDGE_BOTH: EDGE_BOTH,
 
     /**
      * @see {@link Gpio.setup}

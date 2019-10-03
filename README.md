@@ -113,10 +113,9 @@ This API exposes a Promises interface to the module. All of the same functions a
 The Promises interface is available in the `promise` namespace, e.g.:
 
 ```js
-var gpio = require('rpi-gpio')
-var gpiop = gpio.promise;
+var gpiop = require('rpi-gpio').promise;
 
-gpiop.setup(7, gpio.DIR_OUT)
+gpiop.setup(7, gpiop.DIR_OUT)
     .then(() => {
         return gpiop.write(7, true)
     })
