@@ -1,6 +1,6 @@
 {
   "name": "rpi-gpio",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "Control Raspberry Pi GPIO pins with node.js",
   "main": "rpi-gpio.js",
   "keywords:": [
