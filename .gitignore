@@ -15,3 +15,6 @@ node_modules
 npm-debug.log
 coverage
 .idea
+
+rpi-gpio.d.ts
+rpi-gpio.js

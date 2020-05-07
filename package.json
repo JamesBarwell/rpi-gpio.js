@@ -1,38 +1,50 @@
 {
-  "name": "rpi-gpio",
-  "version": "2.1.5",
-  "description": "Control Raspberry Pi GPIO pins with node.js",
-  "main": "rpi-gpio.js",
-  "keywords:": [
-    "raspberry",
-    "pi",
-    "gpio"
-  ],
-  "directories": {
-    "test": "test",
-    "integration": "integration"
-  },
-  "devDependencies": {
-    "istanbul": "^0.4.5",
-    "mocha": "^5.2.0",
-    "sinon": "^7.4.2"
-  },
-  "scripts": {
-    "test": "mocha",
-    "spec": "mocha --reporter spec",
-    "coverage": "istanbul cover _mocha",
-    "int": "mocha test/integration"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/JamesBarwell/rpi-gpio.js.git"
-  },
-  "author": "James Barwell <jb@jamesbarwell.co.uk>",
-  "license": "MIT",
-  "readmeFilename": "README.md",
-  "dependencies": {
-    "async-retry": "^1.2.1",
-    "debug": "^3.1.0",
-    "epoll": "^2.0.10"
-  }
+    "name": "rpi-gpio",
+    "version": "2.1.5",
+    "description": "Control Raspberry Pi GPIO pins with node.js",
+    "main": "rpi-gpio.js",
+    "types": "rpi-gpio.d.ts",
+    "keywords:": [
+        "raspberry",
+        "pi",
+        "gpio"
+    ],
+    "directories": {
+        "test": "test",
+        "integration": "integration"
+    },
+    "devDependencies": {
+        "@types/node": "^13.13.5",
+        "@types/debug": "^4.1.5",
+        "istanbul": "^0.4.5",
+        "mocha": "^5.2.0",
+        "sinon": "^7.4.2",
+        "typescript": "^3.8.3"
+    },
+    "scripts": {
+        "build": "tsc",
+        "build:watch": "tsc --watch",
+        "pretest": "npm run build",
+        "test": "mocha",
+        "prespec": "npm run build",
+        "spec": "mocha --reporter spec",
+        "precoverage": "npm run build",
+        "coverage": "istanbul cover _mocha",
+        "preint": "npm run build",
+        "int": "mocha test/integration",
+        "prepublishOnly": "npm test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/JamesBarwell/rpi-gpio.js.git"
+    },
+    "author": "James Barwell <jb@jamesbarwell.co.uk>",
+    "license": "MIT",
+    "readmeFilename": "README.md",
+    "dependencies": {
+        "@types/async-retry": "^1.2.1",
+        "async-retry": "^1.2.1",
+        "debug": "^4.1.1",
+        "epoll": "^2.0.10"
+    }
 }
