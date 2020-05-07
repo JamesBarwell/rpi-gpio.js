@@ -14,14 +14,16 @@
         "integration": "integration"
     },
     "devDependencies": {
-        "@types/node": "^13.13.5",
         "@types/debug": "^4.1.5",
+        "@types/node": "^13.13.5",
         "istanbul": "^0.4.5",
         "mocha": "^5.2.0",
+        "rimraf": "^3.0.2",
         "sinon": "^7.4.2",
         "typescript": "^3.8.3"
     },
     "scripts": {
+        "clean": "rimraf rpi-gpio.d.ts rpi-gpio.js",
         "build": "tsc",
         "build:watch": "tsc --watch",
         "pretest": "npm run build",
