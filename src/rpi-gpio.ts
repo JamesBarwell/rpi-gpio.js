@@ -160,8 +160,7 @@ class Gpio extends EventEmitter {
      * @param edge       edge Informs the GPIO chip if it needs to generate interrupts. Either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'
      * @param {function} onSetup  callback
      */
-    //TODO: sort out arguments
-    public setup(channelName: string | number, direction: DIR, edge: EDGE, onSetup: ValueCallback<boolean>) {
+    public setup(channel: number, direction: DIR, edge: EDGE, onSetup: ValueCallback<boolean>) {
         if (arguments.length === 2 && typeof direction == 'function') {
             onSetup = direction;
             direction = this.DIR_OUT;
@@ -170,8 +169,6 @@ class Gpio extends EventEmitter {
             onSetup = edge;
             edge = this.EDGE_NONE;
         }
-
-        const channel = parseChannel(channelName);
 
         direction = direction || this.DIR_OUT;
         edge = edge || this.EDGE_NONE;
@@ -206,8 +203,8 @@ class Gpio extends EventEmitter {
 
         let pinForSetup: string | undefined;
 
-        const onListen = (readChannel: string | number) => {
-            this.read(readChannel, (err?: Error | null, value?: boolean) => {
+        const onListen = (readChannel: string) => {
+            this.read(parseInt(readChannel), (err?: Error | null, value?: boolean) => {
                 if (err) {
                     debug(
                         'Error reading channel value after change, %d',
@@ -229,7 +226,7 @@ class Gpio extends EventEmitter {
                 pinForSetup = this.getPinForCurrentMode(channel);
                 if (!pinForSetup) {
                     throw new Error(
-                        'Channel ' + channelName + ' does not map to a GPIO pin'
+                        'Channel ' + channel + ' does not map to a GPIO pin'
                     );
                 }
                 debug('set up pin %d', pinForSetup);
@@ -277,7 +274,7 @@ class Gpio extends EventEmitter {
      * @param {boolean}  value   If true, turns the channel on, else turns off
      * @param {function} cb      Optional callback
      */
-    public write(channel: string | number, value: boolean, cb?: ErrorCallback) {
+    public write(channel: number, value: boolean, cb?: ErrorCallback) {
         var pin = this.getPinForCurrentMode(channel);
         const callback = cb || function() {}
 
@@ -290,7 +287,7 @@ class Gpio extends EventEmitter {
         const writtenValue = (!!value && (value as any) !== '0') ? '1' : '0';
 
         debug('writing pin %d with value %s', pin, value);
-        writeFile(PATH + '/gpio' + pin + '/value', value, callback);
+        writeFile(PATH + '/gpio' + pin + '/value', writtenValue, callback);
     };
 
     /**
@@ -300,7 +297,7 @@ class Gpio extends EventEmitter {
      * @param {boolean}  value   If true, turns the channel on, else turns off
      * @param {function} cb      Optional callback
      */
-    public output(channel: string | number, value: boolean, cb?: ErrorCallback){
+    public output(channel: number, value: boolean, cb?: ErrorCallback){
         this.write(channel, value, cb);
     }
 
@@ -310,7 +307,7 @@ class Gpio extends EventEmitter {
      * @param {number}   channel The channel to read from
      * @param {function} cb      Callback which receives the channel's boolean value
      */
-    public read(channel: string | number, cb: ValueCallback<boolean> /*err,value*/) {
+    public read(channel: number, cb: ValueCallback<boolean> /*err,value*/) {
         if (typeof cb !== 'function') {
             throw new Error('A callback must be provided')
         }
@@ -341,7 +338,7 @@ class Gpio extends EventEmitter {
      * @param {number}   channel The channel to read from
      * @param {function} cb      Callback which receives the channel's boolean value
      */
-    public input(channel: string | number, cb: ValueCallback<boolean>) {
+    public input(channel: number, cb: ValueCallback<boolean>) {
         this.read(channel, cb);
     }
 
@@ -438,12 +435,11 @@ class Gpio extends EventEmitter {
         });
     };
 
-    private getPinRpi(channelName: string | number): string | undefined {
-        return this.currentPins != null ? this.currentPins[parseChannel(channelName)]?.toString() : undefined;
+    private getPinRpi(channel: number): string | undefined {
+        return this.currentPins != null ? this.currentPins[channel]?.toString() : undefined;
     };
 
-    private getPinBcm(channelName: string | number): string | undefined {
-        const channel = parseChannel(channelName);
+    private getPinBcm(channel: number): string | undefined {
         return this.currentValidBcmPins.indexOf(channel) !== -1 ? channel.toString() : undefined;
     };
 
@@ -453,7 +449,7 @@ class Gpio extends EventEmitter {
      * @param {number}      channel The channel to watch
      * @param {function}    cb Callback which receives the channel's err
      */
-    private listen(channel: string | number, onChange: (channel: string) => void) {
+    private listen(channel: number, onChange: (channel: string) => void) {
         var pin = this.getPinForCurrentMode(channel);
 
         if (!pin || !this.exportedInputPins[pin] && !this.exportedOutputPins[pin]) {
@@ -497,7 +493,7 @@ class Gpio extends EventEmitter {
          * @param edge
          * @returns {Promise}
          */
-        setup: (channel: string | number, direction: DIR, edge: EDGE) => {
+        setup: (channel: number, direction: DIR, edge: EDGE) => {
             return new Promise((resolve, reject) => {
                 function done(error: any) {
                     if (error) return reject(error);
@@ -514,7 +510,7 @@ class Gpio extends EventEmitter {
          * @param value
          * @returns {Promise}
          */
-        write: (channel: string | number, value: boolean) => {
+        write: (channel: number, value: boolean) => {
             return new Promise((resolve, reject) => {
                 function done(error: any) {
                     if (error) return reject(error);
@@ -530,7 +526,7 @@ class Gpio extends EventEmitter {
          * @param channel
          * @returns {Promise}
          */
-        read:  (channel: string | number) => {
+        read:  (channel: number) => {
             return new Promise((resolve, reject) => {
                 function done(error: any, result?: boolean) {
                     if (error) return reject(error);
@@ -556,10 +552,6 @@ class Gpio extends EventEmitter {
             })
         }
     }
-}
-
-function parseChannel(channelName: string | number){
-    return typeof channelName === 'string' ? parseInt(channelName, 10) : channelName;
 }
 
 function setEdge(pin: string, edge: EDGE) {
