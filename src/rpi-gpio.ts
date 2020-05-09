@@ -90,25 +90,25 @@ const RETRY_OPTS = {
     factor: 1
 }
 
-export type MODE = 'mode_rpi' | 'mode_bcm';
-export type DIR = 'in' | 'out' | 'low' | 'high';
-export type EDGE = 'none' | 'rising' | 'falling' | 'both';
+type MODE = 'mode_rpi' | 'mode_bcm';
+type DIR = 'in' | 'out' | 'low' | 'high';
+type EDGE = 'none' | 'rising' | 'falling' | 'both';
 
-export type ValueCallback<T> = (err?: Error | null, value?: T) => void
-export type ErrorCallback = (err?: Error | null) => void
+type ValueCallback<T> = (err?: Error | null, value?: T) => void
+type ErrorCallback = (err?: Error | null) => void
 
-export const DIR_IN: DIR   = 'in';
-export const DIR_OUT: DIR  = 'out';
-export const DIR_LOW: DIR  = 'low';
-export const DIR_HIGH: DIR = 'high';
+const DIR_IN: DIR   = 'in';
+const DIR_OUT: DIR  = 'out';
+const DIR_LOW: DIR  = 'low';
+const DIR_HIGH: DIR = 'high';
 
-export const MODE_RPI: MODE = 'mode_rpi';
-export const MODE_BCM: MODE = 'mode_bcm';
+const MODE_RPI: MODE = 'mode_rpi';
+const MODE_BCM: MODE = 'mode_bcm';
 
-export const EDGE_NONE: EDGE    = 'none';
-export const EDGE_RISING: EDGE  = 'rising';
-export const EDGE_FALLING: EDGE = 'falling';
-export const EDGE_BOTH: EDGE    = 'both';
+const EDGE_NONE: EDGE    = 'none';
+const EDGE_RISING: EDGE  = 'rising';
+const EDGE_FALLING: EDGE = 'falling';
+const EDGE_BOTH: EDGE    = 'both';
 
 class Gpio extends EventEmitter {
 
@@ -156,37 +156,40 @@ class Gpio extends EventEmitter {
      * Setup a channel for use as an input or output
      *
      * @param {number}   channel   Reference to the pin in the current mode's schema
-     * @param {string}   direction The pin direction, either 'in' or 'out'
-     * @param edge       edge Informs the GPIO chip if it needs to generate interrupts. Either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'
-     * @param {function} onSetup  callback
+     * @param {string}   _direction The pin direction, either 'in' or 'out'
+     * @param _edge       edge Informs the GPIO chip if it needs to generate interrupts. Either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'
+     * @param {function} _onSetup  callback
      */
-    public setup(channel: number, direction: DIR, edge: EDGE, onSetup: ValueCallback<boolean>) {
-        if (arguments.length === 2 && typeof direction == 'function') {
-            onSetup = direction;
-            direction = this.DIR_OUT;
-            edge = this.EDGE_NONE;
-        } else if (arguments.length === 3 && typeof edge == 'function') {
-            onSetup = edge;
-            edge = this.EDGE_NONE;
-        }
+    public setup(channel: number, onSetup?: ValueCallback<boolean>): void;
+    public setup(channel: number, direction?: DIR, onSetup?: ValueCallback<boolean>): void;
+    public setup(channel: number, direction?: DIR, edge?: EDGE, onSetup?: ValueCallback<boolean>): void;
+    public setup(channel: number, direction?: DIR | ValueCallback<boolean>, edge?: EDGE | ValueCallback<boolean>, onSetup?: ValueCallback<boolean>) {
 
-        direction = direction || this.DIR_OUT;
-        edge = edge || this.EDGE_NONE;
-        onSetup = onSetup || function() {};
+        let _direction = typeof direction === "string" ? direction : this.DIR_OUT;
+        let _edge: EDGE = typeof edge === "string" ? edge : this.EDGE_NONE;
+        let _onSetup: ValueCallback<boolean>;
+
+        if (arguments.length === 2 && typeof direction == 'function') {
+            _onSetup = direction;
+        } else if (arguments.length === 3 && typeof edge == 'function') {
+            _onSetup = edge;
+        } else {
+            _onSetup = onSetup || function() {};
+        }
 
         if (typeof channel !== 'number') {
             return process.nextTick(() => {
-                onSetup(new Error('Channel must be a number'));
+                _onSetup(new Error('Channel must be a number'));
             });
         }
 
-        if (direction !== this.DIR_IN &&
-            direction !== this.DIR_OUT &&
-            direction !== this.DIR_LOW &&
-            direction !== this.DIR_HIGH
+        if (_direction !== this.DIR_IN &&
+            _direction !== this.DIR_OUT &&
+            _direction !== this.DIR_LOW &&
+            _direction !== this.DIR_HIGH
         ) {
             return process.nextTick(function() {
-                onSetup(new Error('Cannot set invalid direction'));
+                _onSetup(new Error('Cannot set invalid direction'));
             });
         }
 
@@ -195,9 +198,9 @@ class Gpio extends EventEmitter {
             this.EDGE_RISING,
             this.EDGE_FALLING,
             this.EDGE_BOTH
-        ].indexOf(edge) == -1) {
+        ].indexOf(_edge) == -1) {
             return process.nextTick(function() {
-                onSetup(new Error('Cannot set invalid edge'));
+                _onSetup(new Error('Cannot set invalid edge'));
             });
         }
 
@@ -242,28 +245,28 @@ class Gpio extends EventEmitter {
             })
             .then(() => {
                 return retry(() => {
-                    return setEdge(pinForSetup!, edge);
+                    return setEdge(pinForSetup!, _edge);
                 }, RETRY_OPTS);
             })
             .then(() => {
-                if (direction === DIR_IN) {
+                if (_direction === DIR_IN) {
                     this.exportedInputPins[pinForSetup!] = true;
                 } else {
                     this.exportedOutputPins[pinForSetup!] = true;
                 }
 
                 return retry(() => {
-                    return setDirection(pinForSetup!, direction)
+                    return setDirection(pinForSetup!, _direction)
                 }, RETRY_OPTS);
             })
             .then(() => {
                 this.listen(channel, onListen);
             })
             .then(() => {
-                onSetup();
+                _onSetup();
             })
             .catch(function(err) {
-                onSetup(err);
+                _onSetup(err);
             });
     };
 
@@ -345,7 +348,7 @@ class Gpio extends EventEmitter {
     /**
      * Unexport any pins setup by this module
      *
-     * @param {function} cb Optional callback
+     * @param {function} cb callback
      */
     public destroy(cb: ErrorCallback) {
         var tasks = Object.keys(this.exportedOutputPins)
@@ -624,6 +627,6 @@ function clearInterrupt(fd: number) {
     readSync(fd, Buffer.alloc(1), 0, 1, 0);
 }
 
-var GPIO = new Gpio();
+const GPIO = new Gpio();
 
-module.exports = GPIO;
+export = GPIO;
