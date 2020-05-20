@@ -20,17 +20,18 @@ Control Raspberry Pi GPIO pins with node.js
 
 ## Supported node versions
 
-rpi-gpio 1.x is no longer supported. Please use 2.x unless you need to run with an old version of node.
+Please use 3.x unless you need to run with an old version of node. Older versions are not supported.
 
-| node version | rpi-gpio 1.x | rpi-gpio 2.x + |
-| ------------ | ------------ | -------------- |
-| 0.10         | Yes          | No             |
-| 0.12         | Yes          | No             |
-| 4            | Yes          | Yes            |
-| 6            | Yes          | Yes            |
-| 8            | Yes          | Yes            |
-| 10           | No           | Yes            |
-| 12           | No           | Yes            |
+| node version | rpi-gpio 1.x | rpi-gpio 2.x + | rpi-gpio 3.x + |
+| ------------ | ------------ | -------------- | -------------- |
+| 0.10         | Yes          | No             | No             |
+| 0.12         | Yes          | No             | No             |
+| 4            | Yes          | Yes            | No             |
+| 6            | Yes          | Yes            | No             |
+| 8            | Yes          | Yes            | Yes            |
+| 10           | No           | Yes            | Yes            |
+| 12           | No           | Yes            | Yes            |
+| 14           | No           | Yes            | Yes            |
 
 ## Setup and install
 
