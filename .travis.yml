@@ -3,11 +3,10 @@ sudo: false
 env:
   - CXX=g++-4.8
 node_js:
-  - "4"
-  - "6"
   - "8"
   - "10"
   - "12"
+  - "14"
 script: npm run lint && npm test
 addons:
   apt:
