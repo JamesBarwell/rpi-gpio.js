@@ -14,14 +14,14 @@
   },
   "devDependencies": {
     "eslint": "^6.8.0",
-    "istanbul": "^0.4.5",
     "mocha": "^7.1.2",
+    "nyc": "^15.0.1",
     "sinon": "^7.4.2"
   },
   "scripts": {
     "test": "mocha",
     "spec": "mocha --reporter spec",
-    "coverage": "istanbul cover _mocha",
+    "coverage": "nyc npm run test",
     "int": "mocha test/integration",
     "lint": "eslint rpi-gpio.js test",
     "lint-fix": "eslint rpi-gpio.js test --fix"
