@@ -1,12 +1,12 @@
-var fs           = require('fs');
-var util         = require('util');
-var EventEmitter = require('events').EventEmitter;
-var retry        = require('async-retry');
-var debug        = require('debug')('rpi-gpio');
-var Epoll        = require('epoll').Epoll;
+const fs           = require('fs');
+const util         = require('util');
+const EventEmitter = require('events').EventEmitter;
+const retry        = require('async-retry');
+const debug        = require('debug')('rpi-gpio');
+const Epoll        = require('epoll').Epoll;
 
-var PATH = '/sys/class/gpio';
-var PINS = {
+const PATH = '/sys/class/gpio';
+const PINS = {
   v1: {
     // 1: 3.3v
     // 2: 5v
@@ -81,32 +81,32 @@ var PINS = {
   },
 };
 
-var RETRY_OPTS = {
+const RETRY_OPTS = {
   retries: 100,
   minTimeout: 10,
   factor: 1,
 };
 
-var DIR_IN   = 'in';
-var DIR_OUT  = 'out';
-var DIR_LOW  = 'low';
-var DIR_HIGH = 'high';
+const DIR_IN   = 'in';
+const DIR_OUT  = 'out';
+const DIR_LOW  = 'low';
+const DIR_HIGH = 'high';
 
-var MODE_RPI = 'mode_rpi';
-var MODE_BCM = 'mode_bcm';
+const MODE_RPI = 'mode_rpi';
+const MODE_BCM = 'mode_bcm';
 
-var EDGE_NONE    = 'none';
-var EDGE_RISING  = 'rising';
-var EDGE_FALLING = 'falling';
-var EDGE_BOTH    = 'both';
+const EDGE_NONE    = 'none';
+const EDGE_RISING  = 'rising';
+const EDGE_FALLING = 'falling';
+const EDGE_BOTH    = 'both';
 
 function Gpio() {
-  var currentPins;
-  var currentValidBcmPins;
-  var exportedInputPins = {};
-  var exportedOutputPins = {};
-  var getPinForCurrentMode = getPinRpi;
-  var pollers = {};
+  let currentPins;
+  let currentValidBcmPins;
+  let exportedInputPins = {};
+  let exportedOutputPins = {};
+  let getPinForCurrentMode = getPinRpi;
+  let pollers = {};
 
   this.DIR_IN   = DIR_IN;
   this.DIR_OUT  = DIR_OUT;
@@ -186,9 +186,9 @@ function Gpio() {
       });
     }
 
-    var pinForSetup;
+    let pinForSetup;
 
-    var onListen = function(readChannel) {
+    const onListen = function(readChannel) {
       this.read(readChannel, function(err, value) {
         if (err) {
           debug(
@@ -260,7 +260,7 @@ function Gpio() {
      * @param {function} cb      Optional callback
      */
   this.write = this.output = function(channel, value, cb /*err*/) {
-    var pin = getPinForCurrentMode(channel);
+    const pin = getPinForCurrentMode(channel);
     cb = cb || function() {};
 
     if (!exportedOutputPins[pin]) {
@@ -286,7 +286,7 @@ function Gpio() {
       throw new Error('A callback must be provided');
     }
 
-    var pin = getPinForCurrentMode(channel);
+    const pin = getPinForCurrentMode(channel);
 
     if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
       return process.nextTick(function() {
@@ -310,7 +310,7 @@ function Gpio() {
      * @param {function} cb Optional callback
      */
   this.destroy = function(cb) {
-    var tasks = Object.keys(exportedOutputPins)
+    const tasks = Object.keys(exportedOutputPins)
       .concat(Object.keys(exportedInputPins))
       .map(function(pin) {
         return new Promise(function(resolve, reject) {
@@ -362,15 +362,15 @@ function Gpio() {
         }
 
         // Match the last 4 digits of the number following "Revision:"
-        var match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+        const match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
 
         if (!match) {
-          var errorMessage = 'Unable to match Revision in /proc/cpuinfo: ' + data;
+          const errorMessage = 'Unable to match Revision in /proc/cpuinfo: ' + data;
           return reject(new Error(errorMessage));
         }
 
-        var revisionNumber = parseInt(match[1], 16);
-        var pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
+        const revisionNumber = parseInt(match[1], 16);
+        const pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
 
         debug(
           'seen hardware revision %d; using pin mode %s',
@@ -411,20 +411,20 @@ function Gpio() {
      * @param {function}    cb Callback which receives the channel's err
      */
   function listen(channel, onChange) {
-    var pin = getPinForCurrentMode(channel);
+    const pin = getPinForCurrentMode(channel);
 
     if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
       throw new Error('Channel %d has not been exported', channel);
     }
 
     debug('listen for pin %d', pin);
-    var poller = new Epoll(function(err, innerfd) {
+    const poller = new Epoll(function(err, innerfd) {
       if (err) throw err;
       clearInterrupt(innerfd);
       onChange(channel);
     });
 
-    var fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
+    const fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
     clearInterrupt(fd);
     poller.add(fd, Epoll.EPOLLPRI);
     // Append ready-to-use remove function
@@ -504,7 +504,7 @@ function clearInterrupt(fd) {
   fs.readSync(fd, Buffer.alloc(1), 0, 1, 0);
 }
 
-var GPIO = new Gpio();
+const GPIO = new Gpio();
 
 // Promise
 GPIO.promise = {
