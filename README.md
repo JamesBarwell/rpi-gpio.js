@@ -46,6 +46,15 @@ Please note that this module has a dependency on [epoll](https://github.com/fivd
 
 If you are having trouble installing this module make sure you are running gcc/g++ `-v 4.8` or higher. [Here](https://github.com/fivdi/onoff/wiki/Node.js-v4-and-native-addons) is an installation guide.
 
+### Typescript
+
+If you wish to use this module with Typescript, install the definitions from Definitely Typed:
+```
+npm install --save @types/rpi-gpio
+```
+
+Please note that this is not a Typescript project and the definitions are independently maintained by the community. Thanks to Roaders for providing these.
+
 ## Usage
 Before you can read or write, you must use `setup()` to open a channel, and must specify whether it will be used for input or output. Having done this, you can then read in the state of the channel or write a value to it using `read()` or `write()`.
 
