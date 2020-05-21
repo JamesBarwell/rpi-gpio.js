@@ -5,6 +5,59 @@ const retry        = require('async-retry');
 const debug        = require('debug')('rpi-gpio');
 const Epoll        = require('epoll').Epoll;
 
+const fsExists = (path) => {
+  return new Promise((resolve) => {
+    fs.exists(path, (data) => {
+      resolve(data);
+    });
+  });
+}
+
+const fsRead = (fd, buffer, offset, length, position) => {
+  return new Promise((resolve, reject) => {
+    fs.read(fd, buffer, offset, length, position, (err, data) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(data);
+    });
+  });
+}
+
+const fsOpen = (path, flags) => {
+  return new Promise((resolve, reject) => {
+    fs.open(path, flags, (err, data) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(data);
+    });
+  });
+}
+
+const fsReadFile = (path, mode) => {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, mode, (err, data) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(data);
+    });
+  });
+}
+
+const fsWriteFile = (path, value) => {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(path, value, (err) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve();
+    });
+  });
+}
+
+
 const PATH = '/sys/class/gpio';
 const PINS = {
   v1: {
@@ -126,7 +179,7 @@ function Gpio() {
      *
      * @param {string} mode Pin reference mode, 'mode_rpi' or 'mode_bcm'
      */
-  this.setMode = function(mode) {
+  this.setMode = (mode) => {
     if (mode === this.MODE_RPI) {
       getPinForCurrentMode = getPinRpi;
     } else if (mode === this.MODE_BCM) {
@@ -142,27 +195,15 @@ function Gpio() {
      * @param {number}   channel   Reference to the pin in the current mode's schema
      * @param {string}   direction The pin direction, either 'in' or 'out'
      * @param edge       edge Informs the GPIO chip if it needs to generate interrupts. Either 'none', 'rising', 'falling' or 'both'. Defaults to 'none'
-     * @param {function} onSetup   Optional callback
      */
-  this.setup = function(channel, direction, edge, onSetup /*err*/) {
-    if (arguments.length === 2 && typeof direction == 'function') {
-      onSetup = direction;
-      direction = this.DIR_OUT;
-      edge = this.EDGE_NONE;
-    } else if (arguments.length === 3 && typeof edge == 'function') {
-      onSetup = edge;
-      edge = this.EDGE_NONE;
-    }
-
-    channel = parseInt(channel);
+  this.setup = async (channel, direction, edge) => {
     direction = direction || this.DIR_OUT;
     edge = edge || this.EDGE_NONE;
-    onSetup = onSetup || function() {};
+
+    channel = parseInt(channel);
 
     if (typeof channel !== 'number') {
-      return process.nextTick(() => {
-        onSetup(new Error('Channel must be a number'));
-      });
+      throw new Error('Channel must be a number');
     }
 
     if (direction !== this.DIR_IN &&
@@ -170,9 +211,7 @@ function Gpio() {
             direction !== this.DIR_LOW &&
             direction !== this.DIR_HIGH
     ) {
-      return process.nextTick(() => {
-        onSetup(new Error('Cannot set invalid direction'));
-      });
+      throw new Error('Cannot set invalid direction');
     }
 
     if ([
@@ -181,75 +220,56 @@ function Gpio() {
       this.EDGE_FALLING,
       this.EDGE_BOTH,
     ].indexOf(edge) == -1) {
-      return process.nextTick(() => {
-        onSetup(new Error('Cannot set invalid edge'));
-      });
+      throw new Error('Cannot set invalid edge');
     }
 
-    let pinForSetup;
+    await setRaspberryVersion();
 
-    const onListen = function(readChannel) {
-      this.read(readChannel, (err, value) => {
-        if (err) {
-          debug(
-            'Error reading channel value after change, %d',
-            readChannel,
-          );
-          return;
-        }
+    const pinForSetup = getPinForCurrentMode(channel);
+    if (!pinForSetup) {
+      throw new Error(
+        'Channel ' + channel + ' does not map to a GPIO pin',
+      );
+    }
+    debug('set up pin %d', pinForSetup);
+
+    const pinIsExported = await isExported(pinForSetup);
+    if (pinIsExported) {
+      await unexportPin(pinForSetup);
+    }
+
+    await exportPin(pinForSetup);
+
+    await retry(() => {
+      return setEdge(pinForSetup, edge);
+    }, RETRY_OPTS);
+
+    if (direction === DIR_IN) {
+      exportedInputPins[pinForSetup] = true;
+    } else {
+      exportedOutputPins[pinForSetup] = true;
+    }
+
+    await retry(() => {
+      return setDirection(pinForSetup, direction);
+    }, RETRY_OPTS);
+
+    await listen(channel, async (readChannel) => {
+      try {
+        const value = await this.read(readChannel);
         debug(
           'emitting change on channel %s with value %s',
           readChannel,
           value,
         );
         this.emit('change', readChannel, value);
-      });
-    }.bind(this);
-
-    setRaspberryVersion()
-      .then(() => {
-        pinForSetup = getPinForCurrentMode(channel);
-        if (!pinForSetup) {
-          throw new Error(
-            'Channel ' + channel + ' does not map to a GPIO pin',
-          );
-        }
-        debug('set up pin %d', pinForSetup);
-        return isExported(pinForSetup);
-      })
-      .then((isExported) => {
-        if (isExported) {
-          return unexportPin(pinForSetup);
-        }
-      })
-      .then(() => {
-        return exportPin(pinForSetup);
-      })
-      .then(() => {
-        return retry(() => {
-          return setEdge(pinForSetup, edge);
-        }, RETRY_OPTS);
-      })
-      .then(() => {
-        if (direction === DIR_IN) {
-          exportedInputPins[pinForSetup] = true;
-        } else {
-          exportedOutputPins[pinForSetup] = true;
-        }
-
-        return retry(() => {
-          return setDirection(pinForSetup, direction);
-        }, RETRY_OPTS);
-      })
-      .then(() => {
-        listen(channel, onListen);
-      })
-      .then(() => {
-        onSetup();
-      })
-      .catch((err) => {
-        onSetup(err);
-      });
+      } catch (err) {
+        debug(
+          'Error reading channel value after change, %d',
+          readChannel,
+        );
+      }
+    });
   };
 
   /**
@@ -257,59 +277,42 @@ function Gpio() {
      *
      * @param {number}   channel The channel to write to
      * @param {boolean}  value   If true, turns the channel on, else turns off
-     * @param {function} cb      Optional callback
      */
-  this.write = this.output = function(channel, value, cb /*err*/) {
+  this.write = this.output = async (channel, value) => {
     const pin = getPinForCurrentMode(channel);
-    cb = cb || function() {};
 
     if (!exportedOutputPins[pin]) {
-      return process.nextTick(() => {
-        cb(new Error('Pin has not been exported for write'));
-      });
+      throw new Error('Pin has not been exported for write');
     }
 
     value = (!!value && value !== '0') ? '1' : '0';
 
     debug('writing pin %d with value %s', pin, value);
-    fs.writeFile(PATH + '/gpio' + pin + '/value', value, cb);
+    fsWriteFile(PATH + '/gpio' + pin + '/value', value);
   };
 
   /**
      * Read a value from a channel
      *
      * @param {number}   channel The channel to read from
-     * @param {function} cb      Callback which receives the channel's boolean value
      */
-  this.read = this.input = function(channel, cb /*err,value*/) {
-    if (typeof cb !== 'function') {
-      throw new Error('A callback must be provided');
-    }
-
+  this.read = this.input = async (channel) => {
     const pin = getPinForCurrentMode(channel);
 
     if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
-      return process.nextTick(() => {
-        cb(new Error('Pin has not been exported'));
-      });
+      throw new Error('Pin has not been exported');
     }
 
-    fs.readFile(PATH + '/gpio' + pin + '/value', 'utf-8', function(err, data) {
-      if (err) {
-        return cb(err);
-      }
-      data = (data + '').trim() || '0';
-      debug('read pin %s with value %s', pin, data);
-      return cb(null, data === '1');
-    });
+    let data = await fsReadFile(PATH + '/gpio' + pin + '/value', 'utf-8');
+    data = (data + '').trim() || '0';
+    debug('read pin %s with value %s', pin, data);
+    return data === '1';
   };
 
   /**
      * Unexport any pins setup by this module
-     *
-     * @param {function} cb Optional callback
      */
-  this.destroy = function(cb) {
+  this.destroy = async () => {
     const tasks = Object.keys(exportedOutputPins)
       .concat(Object.keys(exportedInputPins))
       .map((pin) => {
@@ -321,19 +324,13 @@ function Gpio() {
         });
       });
 
-    Promise.all(tasks)
-      .then(() => {
-        return cb();
-      })
-      .catch((err) => {
-        return cb(err);
-      });
+    await Promise.all(tasks);
   };
 
   /**
      * Reset the state of the module
      */
-  this.reset = function() {
+  this.reset = () => {
     exportedOutputPins = {};
     exportedInputPins = {};
     this.removeAllListeners();
@@ -350,49 +347,40 @@ function Gpio() {
 
 
   // Private functions requiring access to state
-  function setRaspberryVersion() {
+  async function setRaspberryVersion() {
     if (currentPins) {
-      return Promise.resolve();
+      return;
     }
 
-    return new Promise((resolve, reject) => {
-      fs.readFile('/proc/cpuinfo', 'utf8', (err, data) => {
-        if (err) {
-          return reject(err);
-        }
+    const data = await fsReadFile('/proc/cpuinfo', 'utf8');
 
-        // Match the last 4 digits of the number following "Revision:"
-        const match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
+    // Match the last 4 digits of the number following "Revision:"
+    const match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
 
-        if (!match) {
-          const errorMessage = 'Unable to match Revision in /proc/cpuinfo: ' + data;
-          return reject(new Error(errorMessage));
-        }
+    if (!match) {
+      throw new Error('Unable to match Revision in /proc/cpuinfo: ' + data);
+    }
 
-        const revisionNumber = parseInt(match[1], 16);
-        const pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
+    const revisionNumber = parseInt(match[1], 16);
+    const pinVersion = (revisionNumber < 4) ? 'v1' : 'v2';
 
-        debug(
-          'seen hardware revision %d; using pin mode %s',
-          revisionNumber,
-          pinVersion,
-        );
+    debug(
+      'seen hardware revision %d; using pin mode %s',
+      revisionNumber,
+      pinVersion,
+    );
 
-        // Create a list of valid BCM pins for this Raspberry Pi version.
-        // This will be used to validate channel numbers in getPinBcm
-        currentValidBcmPins = [];
-        Object.keys(PINS[pinVersion]).forEach(
-          (pin) => {
-            // Lookup the BCM pin for the RPI pin and add it to the list
-            currentValidBcmPins.push(PINS[pinVersion][pin]);
-          },
-        );
+    // Create a list of valid BCM pins for this Raspberry Pi version.
+    // This will be used to validate channel numbers in getPinBcm
+    currentValidBcmPins = [];
+    Object.keys(PINS[pinVersion]).forEach(
+      (pin) => {
+        // Lookup the BCM pin for the RPI pin and add it to the list
+        currentValidBcmPins.push(PINS[pinVersion][pin]);
+      },
+    );
 
-        currentPins = PINS[pinVersion];
-
-        return resolve();
-      });
-    });
+    currentPins = PINS[pinVersion];
   }
 
   function getPinRpi(channel) {
@@ -410,7 +398,7 @@ function Gpio() {
      * @param {number}      channel The channel to watch
      * @param {function}    cb Callback which receives the channel's err
      */
-  function listen(channel, onChange) {
+  async function listen(channel, onChange) {
     const pin = getPinForCurrentMode(channel);
 
     if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
@@ -420,11 +408,13 @@ function Gpio() {
     debug('listen for pin %d', pin);
     const poller = new Epoll((err, innerfd) => {
       if (err) throw err;
-      clearInterrupt(innerfd);
-      onChange(channel);
+      clearInterrupt(innerfd)
+        .then(() => {
+          onChange(channel);
+        });
     });
 
-    const fd = fs.openSync(PATH + '/gpio' + pin + '/value', 'r+');
+    const fd = await fsOpen(PATH + '/gpio' + pin + '/value', 'r+');
     clearInterrupt(fd);
     poller.add(fd, Epoll.EPOLLPRI);
     // Append ready-to-use remove function
@@ -435,60 +425,28 @@ function Gpio() {
 }
 util.inherits(Gpio, EventEmitter);
 
-function setEdge(pin, edge) {
+async function setEdge(pin, edge) {
   debug('set edge %s on pin %d', edge.toUpperCase(), pin);
-  return new Promise((resolve, reject) => {
-    fs.writeFile(PATH + '/gpio' + pin + '/edge', edge, (err) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve();
-    });
-  });
+  await fsWriteFile(PATH + '/gpio' + pin + '/edge', edge);
 }
 
-function setDirection(pin, direction) {
+async function setDirection(pin, direction) {
   debug('set direction %s on pin %d', direction.toUpperCase(), pin);
-  return new Promise((resolve, reject) => {
-    fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, (err) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve();
-    });
-  });
+  await fsWriteFile(PATH + '/gpio' + pin + '/direction', direction);
 }
 
-function exportPin(pin) {
+async function exportPin(pin) {
   debug('export pin %d', pin);
-  return new Promise((resolve, reject) => {
-    fs.writeFile(PATH + '/export', pin, (err) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve();
-    });
-  });
+  fsWriteFile(PATH + '/export', pin);
 }
 
-function unexportPin(pin) {
+async function unexportPin(pin) {
   debug('unexport pin %d', pin);
-  return new Promise((resolve, reject) => {
-    fs.writeFile(PATH + '/unexport', pin, (err) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve();
-    });
-  });
+  fsWriteFile(PATH + '/unexport', pin);
 }
 
-function isExported(pin) {
-  return new Promise((resolve) => {
-    fs.exists(PATH + '/gpio' + pin, (exists) => {
-      return resolve(exists);
-    });
-  });
+async function isExported(pin) {
+  return fsExists(PATH + '/gpio' + pin);
 }
 
 function removeListener(pin, pollers) {
@@ -500,14 +458,32 @@ function removeListener(pin, pollers) {
   delete pollers[pin];
 }
 
-function clearInterrupt(fd) {
-  fs.readSync(fd, Buffer.alloc(1), 0, 1, 0);
+async function clearInterrupt(fd) {
+  return fsRead(fd, Buffer.alloc(1), 0, 1, 0);
 }
 
 const GPIO = new Gpio();
 
-// Promise
-GPIO.promise = {
+function callbackify(func) {
+  return function() {
+    const args = [].slice.call(arguments);
+    const callback = args.pop();
+
+    func.apply(GPIO, args)
+      .then((result) => {
+        callback(null, result);
+      })
+      .catch((err) => {
+        callback(err);
+      });
+  }
+}
+
+// Promise interface - deprecated, kept for backwards compatibility
+GPIO.promise = GPIO;
+
+// Callback interface - deprecated, kept for backwards compatibility
+GPIO.callback = {
   DIR_IN: DIR_IN,
   DIR_OUT: DIR_OUT,
   DIR_LOW: DIR_LOW,
@@ -521,71 +497,10 @@ GPIO.promise = {
   EDGE_FALLING: EDGE_FALLING,
   EDGE_BOTH: EDGE_BOTH,
 
-  /**
-     * @see {@link Gpio.setup}
-     * @param channel
-     * @param direction
-     * @param edge
-     * @returns {Promise}
-     */
-  setup: function (channel, direction, edge) {
-    return new Promise((resolve, reject) => {
-      function done(error) {
-        if (error) return reject(error);
-        resolve();
-      }
-
-      GPIO.setup(channel, direction, edge, done);
-    });
-  },
-
-  /**
-     * @see {@link Gpio.write}
-     * @param channel
-     * @param value
-     * @returns {Promise}
-     */
-  write: function (channel, value) {
-    return new Promise((resolve, reject) => {
-      function done(error) {
-        if (error) return reject(error);
-        resolve();
-      }
-
-      GPIO.write(channel, value, done);
-    });
-  },
-
-  /**
-     * @see {@link Gpio.read}
-     * @param channel
-     * @returns {Promise}
-     */
-  read: function (channel) {
-    return new Promise((resolve, reject) => {
-      function done(error, result) {
-        if (error) return reject(error);
-        resolve(result);
-      }
-
-      GPIO.read(channel, done);
-    });
-  },
-
-  /**
-     * @see {@link Gpio.destroy}
-     * @returns {Promise}
-     */
-  destroy: function () {
-    return new Promise((resolve, reject) => {
-      function done(error) {
-        if (error) return reject(error);
-        resolve();
-      }
-
-      GPIO.destroy(done);
-    });
-  },
+  setup: callbackify(GPIO.setup),
+  write: callbackify(GPIO.write),
+  read: callbackify(GPIO.read),
+  destroy: callbackify(GPIO.destroy),
 };
 
 module.exports = GPIO;
