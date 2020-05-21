@@ -159,4 +159,10 @@ There is also an integration test that you can run on Raspberry Pi hardware, hav
 npm run int
 ```
 
+You can check run the linting with:
+```
+npm run lint
+npm run lint-fix
+```
+
 The tests use [mochajs](http://mochajs.org) as the test framework, and [Sinon.JS](http://sinonjs.org) to stub and mock out file system calls.
