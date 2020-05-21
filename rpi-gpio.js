@@ -81,6 +81,8 @@ var PINS = {
     }
 };
 
+var PWM_PATH = '/sys/class/pwm/pwmchip0'
+
 var RETRY_OPTS = {
     retries: 100,
     minTimeout: 10,
@@ -348,6 +350,65 @@ function Gpio() {
     EventEmitter.call(this);
     this.reset();
 
+    /**
+     * Setup a channel for use as an PWM emiter
+     *
+     * @param {number}   period    The period in nanoseconds of the PWM signal
+     * @param {number}   dutyCycle The duty cycle in nanoseconds of the PWM signal
+     * @param {function} onPWM     Optional callback
+     */
+    this.pwm = function(period, dutyCycle, onPWM /*err*/) {
+        period = parseInt(period)
+        dutyCycle = parseInt(dutyCycle)
+        onPWM = onPWM || function() {};
+
+        if (typeof period !== 'number') {
+            return process.nextTick(function() {
+                onPWM(new Error('Period must be a number'));
+            });
+        }
+
+        if (typeof dutyCycle !== 'number') {
+            return process.nextTick(function() {
+                onPWM(new Error('Duty cycle must be a number'));
+            });
+        }
+
+        setRaspberryVersion()
+            .then(function() {
+                return isPWMExported()
+            })
+            .then(function(isPWMExported) {
+                if (!isPWMExported) {
+                    return exportPWM();
+                }
+            })
+            .then(function() {
+                return retry(function() {
+                    return setPWMPeriod(period);
+                }, RETRY_OPTS);
+            })
+            .then(function() {
+                return retry(function() {
+                    return setPWMDutyCycle(dutyCycle)
+                }, RETRY_OPTS);
+            })
+            .then(function() {
+                onPWM();
+            })
+            .catch(function(err) {
+                onPWM(err);
+            })
+            .then(function() {
+                return isPWMEnabled();
+            })
+            .then(function(isPWMEnabled) {
+                if (!isPWMEnabled) {
+                    return enablePWM();
+                }
+            });
+    };
+
 
     // Private functions requiring access to state
     function setRaspberryVersion() {
@@ -504,6 +565,97 @@ function clearInterrupt(fd) {
     fs.readSync(fd, Buffer.alloc(1), 0, 1, 0);
 }
 
+function exportPWM() {
+    debug('export PWM');
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PWM_PATH + '/export', '0', function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
+    });
+}
+
+function unexportPWM() {
+    debug('unexport PWM');
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PWM_PATH + '/unexport', '0', function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
+    });
+}
+
+function enablePWM() {
+    debug('enable PWM');
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PWM_PATH + '/pwm0/enable', '1', function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
+    });
+}
+
+function disablePWM() {
+    debug('disable PWM');
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PWM_PATH + '/pwm0/enable', '0', function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
+    });
+}
+
+function isPWMExported() {
+    return new Promise(function(resolve, reject) {
+        fs.exists(PWM_PATH + '/pwm0', function(exists) {
+            return resolve(exists);
+        });
+    });
+}
+
+function isPWMEnabled() {
+    return new Promise(function(resolve, reject) {
+        fs.readFile(PWM_PATH + '/pwm0/enable', 'utf-8', function(err, data) {
+            if (err) {
+                return reject(err)
+            }
+            return resolve (data == '1');
+        });
+    });
+}
+
+function setPWMPeriod(period) {
+    debug('set period %s on PWM', period.toUpperCase());
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PWM_PATH + '/pwm0/period', period, function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
+    });
+}
+
+function setPWMDutyCycle(dutyCycle) {
+    debug('set duty cycle %s on PWM', dutyCycle.toUpperCase());
+    return new Promise(function(resolve, reject) {
+        fs.writeFile(PWM_PATH + '/pwm0/duty_cycle', dutyCycle, function(err) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve();
+        });
+    });
+}
+
 var GPIO = new Gpio();
 
 // Promise
@@ -584,6 +736,23 @@ GPIO.promise = {
             }
 
             GPIO.destroy(done)
+        })
+    },
+
+    /**
+     * @see {@link Gpio.pwm}
+     * @param period
+     * @param dutyCycle
+     * @returns {Promise}
+     */
+    pwm: function (period, dutyCycle) {
+        return new Promise(function (resolve, reject) {
+            function done(error) {
+                if (error) return reject(error);
+                resolve();
+            }
+
+            GPIO.pwm(period, dutyCycle, done)
         })
     }
 };
