@@ -32,9 +32,9 @@ function getCpuInfo(revision) {
   return 'Processor   : ARMv6-compatible processor rev 7 (v6l)\nBogoMIPS    : 697.95\nFeatures    : swp half thumb fastmult vfp edsp java tls\nCPU implementer : 0x41\nCPU architecture: 7\nCPU variant : 0x0\nCPU part    : 0xb76\nCPU revision    : 7\n\n\nHardware    : BCM2708\nRevision    : ' + revision + '\nSerial   : 000000009a5d9c22';
 }
 
-describe('rpi-gpio', function() {
+describe('rpi-gpio', () => {
 
-  beforeEach(function() {
+  beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     sandbox.stub(fs, 'writeFile').yieldsAsync();
@@ -49,32 +49,32 @@ describe('rpi-gpio', function() {
     gpio.version = 1;
   });
 
-  afterEach(function () {
+  afterEach(() => {
     sandbox.restore();
     listeners = [];
   });
 
-  describe('setMode()', function() {
-    context('with an invalid mode', function() {
+  describe('setMode()', () => {
+    context('with an invalid mode', () => {
       let invalidModeSet;
 
-      beforeEach(function() {
-        invalidModeSet = function() {
+      beforeEach(() => {
+        invalidModeSet = () => {
           gpio.setMode('invalid');
         };
       });
 
-      it('should throw an error', function() {
+      it('should throw an error', () => {
         assert.throws(invalidModeSet, Error);
       });
     });
   });
 
-  describe('setup()', function() {
-    context('when given an invalid channel', function() {
+  describe('setup()', () => {
+    context('when given an invalid channel', () => {
       let callback;
 
-      beforeEach(async function() {
+      beforeEach(async () => {
         callback = sandbox.spy();
         try {
           return await gpioPromise.setup(null, null)
@@ -83,93 +83,93 @@ describe('rpi-gpio', function() {
         }
       });
 
-      it('should run the callback with an error', function() {
+      it('should run the callback with an error', () => {
         sinon.assert.calledOnce(callback);
         assert.ok(callback.getCall(0).args[0]);
       });
     });
 
-    context('when given a non-GPIO channel', function() {
+    context('when given a non-GPIO channel', () => {
       let callback;
 
-      beforeEach(function() {
+      beforeEach(() => {
         callback = sandbox.spy();
         return gpioPromise.setup(2, null)
           .catch(callback);
       });
 
-      it('should run the callback with an error', function() {
+      it('should run the callback with an error', () => {
         sinon.assert.calledOnce(callback);
         assert.ok(callback.getCall(0).args[0]);
       });
     });
 
-    context('when given an invalid direction', function() {
+    context('when given an invalid direction', () => {
       let callback;
 
-      beforeEach(function() {
+      beforeEach(() => {
         callback = sandbox.spy();
         return gpioPromise.setup(7, 'foo')
           .catch(callback);
       });
 
-      it('should run the callback with an error', function() {
+      it('should run the callback with an error', () => {
         sinon.assert.calledOnce(callback);
         assert.ok(callback.getCall(0).args[0]);
       });
     });
 
-    context('when given an invalid edge', function() {
+    context('when given an invalid edge', () => {
       let callback;
 
-      beforeEach(function() {
+      beforeEach(() => {
         callback = sandbox.spy();
         return gpioPromise.setup(7, gpio.DIR_IN, 'foo')
           .catch(callback);
       });
 
-      it('should run the callback with an error', function() {
+      it('should run the callback with an error', () => {
         sinon.assert.calledOnce(callback);
         assert.ok(callback.getCall(0).args[0]);
       });
     });
 
-    context('when the channel is already exported', function() {
-      beforeEach(function() {
+    context('when the channel is already exported', () => {
+      beforeEach(() => {
         fs.exists.yieldsAsync(true);
 
         return gpioPromise.setup(7, null);
       });
 
-      it('should first unexport the channel', function() {
+      it('should first unexport the channel', () => {
         const args0 = fs.writeFile.getCall(0).args;
         assert.equal(args0[0], PATH + '/unexport');
         assert.equal(args0[1], '7');
       });
 
 
-      it('should second export the channel', function() {
+      it('should second export the channel', () => {
         const args1 = fs.writeFile.getCall(1).args;
         assert.equal(args1[0], PATH + '/export');
         assert.equal(args1[1], '7');
       });
     });
 
-    context('when the channel is not already exported', function() {
-      beforeEach(function() {
+    context('when the channel is not already exported', () => {
+      beforeEach(() => {
         fs.exists.yieldsAsync(false);
       });
 
-      context('and minimum arguments are specified', function() {
+      context('and minimum arguments are specified', () => {
         let onSetup;
 
-        beforeEach(function() {
+        beforeEach(() => {
           onSetup = sandbox.spy();
           return gpioPromise.setup(7, null)
             .then(onSetup);
         });
 
-        it('should export the channel', function() {
+        it('should export the channel', () => {
           sinon.assert.called(fs.writeFile);
 
           const args0 = fs.writeFile.getCall(0).args;
@@ -177,11 +177,11 @@ describe('rpi-gpio', function() {
           assert.equal(args0[1], '7');
         });
 
-        it('should run the setup callback', function() {
+        it('should run the setup callback', () => {
           sinon.assert.calledOnce(onSetup);
         });
 
-        it('should set the channel edge to none by default', function() {
+        it('should set the channel edge to none by default', () => {
           sinon.assert.called(fs.writeFile);
 
           const args1 = fs.writeFile.getCall(1).args;
@@ -189,7 +189,7 @@ describe('rpi-gpio', function() {
           assert.equal(args1[1], 'none');
         });
 
-        it('should set the channel direction to out by default', function() {
+        it('should set the channel direction to out by default', () => {
           sinon.assert.called(fs.writeFile);
 
           const args2 = fs.writeFile.getCall(2).args;
@@ -197,60 +197,60 @@ describe('rpi-gpio', function() {
           assert.equal(args2[1], 'out');
         });
 
-        it('should set up a listener', function() {
+        it('should set up a listener', () => {
           assert.equal(listeners.length, 1);
 
           const listener = listeners[0];
           sinon.assert.calledWith(listener.add, 'fakeFd');
         });
 
-        it('should clear the interupt twice', function() {
+        it('should clear the interupt twice', () => {
           sinon.assert.calledTwice(fs.readSync);
         });
       });
 
-      context('and direction is specified inwards', function() {
-        beforeEach(function() {
+      context('and direction is specified inwards', () => {
+        beforeEach(() => {
           return gpioPromise.setup(7, gpio.DIR_IN);
         });
 
-        it('should set the channel direction', function() {
+        it('should set the channel direction', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[0], PATH + '/gpio7/direction');
           assert.equal(args[1], 'in');
         });
       });
 
-      context('and direction is specified outwards', function() {
-        beforeEach(function() {
+      context('and direction is specified outwards', () => {
+        beforeEach(() => {
           return gpioPromise.setup(7, gpio.DIR_OUT);
         });
 
-        it('should set the channel direction', function() {
+        it('should set the channel direction', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[0], PATH + '/gpio7/direction');
           assert.equal(args[1], 'out');
         });
       });
 
-      context('and direction is specified low-ward', function() {
-        beforeEach(function() {
+      context('and direction is specified low-ward', () => {
+        beforeEach(() => {
           return gpioPromise.setup(7, gpio.DIR_LOW);
         });
 
-        it('should set the channel direction', function() {
+        it('should set the channel direction', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[0], PATH + '/gpio7/direction');
           assert.equal(args[1], 'low');
         });
       });
 
-      context('and direction is specified high-ward', function() {
-        beforeEach(function() {
+      context('and direction is specified high-ward', () => {
+        beforeEach(() => {
           return gpioPromise.setup(7, gpio.DIR_HIGH);
         });
 
-        it ('should set the channel direction', function() {
+        it ('should set the channel direction', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[0], PATH + '/gpio7/direction');
           assert.equal(args[1], 'high');
@@ -258,14 +258,14 @@ describe('rpi-gpio', function() {
       });
 
       const edge_modes = ['none', 'rising', 'falling', 'both'];
-      edge_modes.forEach(function(edge_mode) {
+      edge_modes.forEach((edge_mode) => {
         const edgeConstant = 'EDGE_' + edge_mode.toUpperCase();
-        context('and the edge is specified as ' + edge_mode, function() {
-          beforeEach(function() {
+        context('and the edge is specified as ' + edge_mode, () => {
+          beforeEach(() => {
             return gpioPromise.setup(7, gpio.DIR_OUT, gpio[edgeConstant]);
           });
 
-          it('should set the channel edge to ' + edge_mode, function() {
+          it('should set the channel edge to ' + edge_mode, () => {
             sinon.assert.called(fs.writeFile);
 
             const args1 = fs.writeFile.getCall(1).args;
@@ -275,20 +275,20 @@ describe('rpi-gpio', function() {
         });
       });
 
-      context('and the edge fails to set first time', function() {
+      context('and the edge fails to set first time', () => {
         it('should try and set the edge again');
       });
 
-      context('and callback is specified', function() {
+      context('and callback is specified', () => {
         let callback;
 
-        beforeEach(function() {
+        beforeEach(() => {
           callback = sandbox.spy();
           return gpioPromise.setup(7)
             .then(callback);
         });
 
-        it('should execute the callback when direction is missing', function() {
+        it('should execute the callback when direction is missing', () => {
           sinon.assert.called(callback);
         });
       });
@@ -297,22 +297,22 @@ describe('rpi-gpio', function() {
 
   });
 
-  describe('write()', function() {
-    context('when pin 7 has been setup for output', function() {
+  describe('write()', () => {
+    context('when pin 7 has been setup for output', () => {
       let onSetup;
 
-      beforeEach(function() {
+      beforeEach(() => {
         onSetup = sandbox.spy();
         return gpioPromise.setup(7, gpio.DIR_OUT)
           .then(onSetup);
       });
 
-      context('and pin 7 is written to with boolean true', function() {
-        beforeEach(function() {
+      context('and pin 7 is written to with boolean true', () => {
+        beforeEach(() => {
           return gpioPromise.write(7, true);
         });
 
-        it('should write the value to the file system', function() {
+        it('should write the value to the file system', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[0], PATH + '/gpio7/value');
           assert.equal(args[1], '1');
@@ -321,95 +321,95 @@ describe('rpi-gpio', function() {
         });
       });
 
-      context('when given number 1', function() {
-        beforeEach(function() {
+      context('when given number 1', () => {
+        beforeEach(() => {
           return gpioPromise.write(7, 1);
         });
 
-        it('should normalise to string "1"', function() {
+        it('should normalise to string "1"', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[1], '1');
         });
       });
 
-      context('when given string "1"', function() {
-        beforeEach(function() {
+      context('when given string "1"', () => {
+        beforeEach(() => {
           return gpioPromise.write(7, 1);
         });
 
-        it('should normalise to string "1"', function() {
+        it('should normalise to string "1"', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[1], '1');
         });
       });
 
-      context('when given boolean false', function() {
-        beforeEach(function() {
+      context('when given boolean false', () => {
+        beforeEach(() => {
           return gpioPromise.write(7, false);
         });
 
-        it('should normalise to string "0"', function() {
+        it('should normalise to string "0"', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[1], '0');
         });
       });
 
-      context('when given number 0', function() {
-        beforeEach(function() {
+      context('when given number 0', () => {
+        beforeEach(() => {
           return gpioPromise.write(7, 0);
         });
 
-        it('should normalise to string "0"', function() {
+        it('should normalise to string "0"', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[1], '0');
         });
       });
 
-      context('when given string "0"', function() {
-        beforeEach(function() {
+      context('when given string "0"', () => {
+        beforeEach(() => {
           return gpioPromise.write(7, '0');
         });
 
-        it('should normalise to string "0"', function() {
+        it('should normalise to string "0"', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[1], '0');
         });
       });
 
-      context('and pin 3 is written to', function() {
+      context('and pin 3 is written to', () => {
         let onWrite;
 
-        beforeEach(function() {
+        beforeEach(() => {
           onWrite = sandbox.spy();
           return gpioPromise.write(3, true)
             .catch(onWrite);
         });
 
-        it('should run the callback with an error', function() {
+        it('should run the callback with an error', () => {
           sinon.assert.calledOnce(onWrite);
           assert.ok(onWrite.getCall(0).args[0]);
         });
       });
     });
 
-    context('when pin 7 has been setup for input', function() {
+    context('when pin 7 has been setup for input', () => {
       let onSetup;
       let onWrite;
 
-      beforeEach(function() {
+      beforeEach(() => {
         onSetup = sandbox.spy();
         return gpioPromise.setup(7, gpio.DIR_IN)
           .then(onSetup);
       });
 
-      context('and pin 7 is written to with boolean true', function() {
-        beforeEach(function() {
+      context('and pin 7 is written to with boolean true', () => {
+        beforeEach(() => {
           onWrite = sandbox.spy();
           return gpioPromise.write(7, true)
             .catch(onWrite);
         });
 
-        it('should run the callback with an error', function() {
+        it('should run the callback with an error', () => {
           sinon.assert.calledOnce(onWrite);
           assert.ok(onWrite.getCall(0).args[0]);
         });
@@ -418,28 +418,28 @@ describe('rpi-gpio', function() {
 
   });
 
-  describe('read()', function() {
+  describe('read()', () => {
 
-    context('when pin 7 is setup for input', function() {
-      beforeEach(function() {
+    context('when pin 7 is setup for input', () => {
+      beforeEach(() => {
         return gpioPromise.setup(7, gpio.DIR_IN);
       });
 
-      context('and pin 7 is on', function() {
-        beforeEach(function() {
+      context('and pin 7 is on', () => {
+        beforeEach(() => {
           fs.readFile.yieldsAsync(null, '1');
         });
 
-        context('and pin 7 is read', function() {
+        context('and pin 7 is read', () => {
           let callback;
 
-          beforeEach(function() {
+          beforeEach(() => {
             callback = sandbox.spy();
             return gpioPromise.read(7)
               .then(callback);
           });
 
-          it('should run the callback with a value boolean true', function() {
+          it('should run the callback with a value boolean true', () => {
             const args = fs.readFile.lastCall.args;
             assert.equal(args[0], PATH + '/gpio7/value');
             sinon.assert.calledWith(callback, true);
@@ -447,21 +447,21 @@ describe('rpi-gpio', function() {
         });
       });
 
-      context('and pin 7 is off', function() {
-        beforeEach(function() {
+      context('and pin 7 is off', () => {
+        beforeEach(() => {
           fs.readFile.yieldsAsync(null, '0');
         });
 
-        context('and pin 7 is read', function() {
+        context('and pin 7 is read', () => {
           let callback;
 
-          beforeEach(function() {
+          beforeEach(() => {
             callback = sandbox.spy();
             return gpioPromise.read(7)
               .then(callback);
           });
 
-          it('should run the callback with a value boolean false', function() {
+          it('should run the callback with a value boolean false', () => {
             const args = fs.readFile.lastCall.args;
             assert.equal(args[0], PATH + '/gpio7/value');
             sinon.assert.calledWith(callback, false);
@@ -470,42 +470,42 @@ describe('rpi-gpio', function() {
         });
       });
 
-      context('and pin 3 is read', function() {
+      context('and pin 3 is read', () => {
         let callback;
 
-        beforeEach(function() {
+        beforeEach(() => {
           callback = sandbox.spy();
           return gpioPromise.read(3)
             .catch(callback);
         });
 
-        it('should run the callback with an error', function() {
+        it('should run the callback with an error', () => {
           sinon.assert.calledOnce(callback);
           assert.ok(callback.getCall(0).args[0]);
         });
       });
     });
 
-    context('when pin 7 is setup for output', function() {
-      beforeEach(function() {
+    context('when pin 7 is setup for output', () => {
+      beforeEach(() => {
         return gpioPromise.setup(7, gpio.DIR_OUT);
       });
 
-      context('and pin 7 is on', function() {
-        beforeEach(function() {
+      context('and pin 7 is on', () => {
+        beforeEach(() => {
           fs.readFile.yieldsAsync(null, '1');
         });
 
-        context('and pin 7 is read', function() {
+        context('and pin 7 is read', () => {
           let callback;
 
-          beforeEach(function() {
+          beforeEach(() => {
             callback = sandbox.spy();
             return gpioPromise.read(7)
               .then(callback);
           });
 
-          it('should run the callback with a value boolean true', function() {
+          it('should run the callback with a value boolean true', () => {
             const args = fs.readFile.lastCall.args;
             assert.equal(args[0], PATH + '/gpio7/value');
             sinon.assert.calledWith(callback, true);
@@ -517,54 +517,54 @@ describe('rpi-gpio', function() {
 
   });
 
-  describe('destroy', function() {
-    context('when pins 7, 8 and 10 have been exported', function() {
+  describe('destroy', () => {
+    context('when pins 7, 8 and 10 have been exported', () => {
       const unexportPath = PATH + '/unexport';
 
-      beforeEach(function() {
-        const setupTasks = [7, 8, 10].map(function(pin) {
+      beforeEach(() => {
+        const setupTasks = [7, 8, 10].map((pin) => {
           return gpioPromise.setup(pin, gpio.DIR_IN);
         });
         return Promise.all(setupTasks);
       });
 
-      it('should have created 3 listeners', function() {
+      it('should have created 3 listeners', () => {
         assert.equal(listeners.length, 3);
       });
 
-      context('and destroy() is run', function() {
+      context('and destroy() is run', () => {
 
-        beforeEach(function() {
+        beforeEach(() => {
           return gpioPromise.destroy();
         });
 
-        it('should unexport pin 7', function() {
+        it('should unexport pin 7', () => {
           sinon.assert.calledWith(fs.writeFile, unexportPath, '7');
         });
 
-        it('should unexport pin 8', function() {
+        it('should unexport pin 8', () => {
           sinon.assert.calledWith(fs.writeFile, unexportPath, '8');
         });
 
-        it('should unexport pin 10', function() {
+        it('should unexport pin 10', () => {
           sinon.assert.calledWith(fs.writeFile, unexportPath, '10');
         });
 
-        it('should unwatch pin 7', function() {
+        it('should unwatch pin 7', () => {
           const listener = listeners[0];
           sinon.assert.calledOnce(listener.remove);
           sinon.assert.calledWith(listener.remove, 'fakeFd');
           sinon.assert.calledOnce(listener.close);
         });
 
-        it('should unwatch pin 8', function() {
+        it('should unwatch pin 8', () => {
           const listener = listeners[1];
           sinon.assert.calledOnce(listener.remove);
           sinon.assert.calledWith(listener.remove, 'fakeFd');
           sinon.assert.calledOnce(listener.close);
         });
 
-        it('should unwatch pin 9', function() {
+        it('should unwatch pin 9', () => {
           const listener = listeners[2];
           sinon.assert.calledOnce(listener.remove);
           sinon.assert.calledWith(listener.remove, 'fakeFd');
@@ -576,12 +576,12 @@ describe('rpi-gpio', function() {
     });
   });
 
-  describe('pin value change', function() {
+  describe('pin value change', () => {
 
-    context('when a pin is set up', function() {
+    context('when a pin is set up', () => {
       let listener;
 
-      beforeEach(function() {
+      beforeEach(() => {
         // Remove previous stub so that we can control when watchFile triggers
 
         listener = sandbox.spy();
@@ -590,21 +590,21 @@ describe('rpi-gpio', function() {
         return gpioPromise.setup(7, gpio.DIR_IN);
       });
 
-      context('and its voltage changes from low to high', function() {
-        beforeEach(function() {
+      context('and its voltage changes from low to high', () => {
+        beforeEach(() => {
           // this is erroring out due to watchFile not working as expected. Please fix
         });
 
       });
     });
 
-    context('when a pin is set up with no callback', function() {
-      beforeEach(function() {
+    context('when a pin is set up with no callback', () => {
+      beforeEach(() => {
         // Remove previous stub so that we can control when watchFile triggers
         return gpioPromise.setup(7, gpio.DIR_IN);
       });
 
-      it('should not error', function() {
+      it('should not error', () => {
         assert.ok(true);
       });
 
@@ -612,10 +612,10 @@ describe('rpi-gpio', function() {
 
   });
 
-  describe('handles pin translation', function() {
+  describe('handles pin translation', () => {
 
-    context('when in RPI mode', function() {
-      beforeEach(function() {
+    context('when in RPI mode', () => {
+      beforeEach(() => {
         gpio.setMode(gpio.MODE_RPI);
       });
 
@@ -689,24 +689,24 @@ describe('rpi-gpio', function() {
         },
       };
 
-      Object.keys(revisionMap).forEach(function(revision) {
+      Object.keys(revisionMap).forEach((revision) => {
         const  revisionSchema = revisionMap[revision];
         const  pinMap = map[revisionSchema];
 
-        context('and hardware revision is: ' + revision, function() {
-          beforeEach(function() {
+        context('and hardware revision is: ' + revision, () => {
+          beforeEach(() => {
             fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo(revision));
           });
 
-          Object.keys(pinMap).forEach(function(rpiPin) {
+          Object.keys(pinMap).forEach((rpiPin) => {
             const bcmPin = pinMap[rpiPin];
 
-            context('writing to RPI pin ' + rpiPin, function() {
-              beforeEach(function() {
+            context('writing to RPI pin ' + rpiPin, () => {
+              beforeEach(() => {
                 return gpioPromise.setup(rpiPin, gpio.DIR_IN);
               });
 
-              it('should write to pin ' + bcmPin + ' (BCM)', function() {
+              it('should write to pin ' + bcmPin + ' (BCM)', () => {
                 assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
               });
             });
@@ -717,8 +717,8 @@ describe('rpi-gpio', function() {
 
     });
 
-    describe('when in BCM mode', function() {
-      beforeEach(function() {
+    describe('when in BCM mode', () => {
+      beforeEach(() => {
         gpio.setMode(gpio.MODE_BCM);
       });
 
@@ -797,41 +797,41 @@ describe('rpi-gpio', function() {
         v2: [0, 1],
       };
 
-      Object.keys(revisionMap).forEach(function(revision) {
+      Object.keys(revisionMap).forEach((revision) => {
         const revisionSchema = revisionMap[revision];
         const pinMap = map[revisionSchema];
         const invalidBcmPins = invalidBcmPinsByVersion[revisionSchema];
 
-        context('and hardware revision is: ' + revision, function() {
-          beforeEach(function() {
+        context('and hardware revision is: ' + revision, () => {
+          beforeEach(() => {
             fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo(revision));
           });
 
-          Object.keys(pinMap).forEach(function(rpiPin) {
+          Object.keys(pinMap).forEach((rpiPin) => {
             const bcmPin = pinMap[rpiPin];
 
-            context('writing to BCM pin ' + bcmPin, function() {
-              beforeEach(function() {
+            context('writing to BCM pin ' + bcmPin, () => {
+              beforeEach(() => {
                 return gpioPromise.setup(bcmPin, gpio.DIR_IN);
               });
 
-              it('should write to the same pin ' + bcmPin + ' (BCM)', function() {
+              it('should write to the same pin ' + bcmPin + ' (BCM)', () => {
                 assert.equal(fs.writeFile.getCall(0).args[1], bcmPin);
               });
             });
           });
 
-          invalidBcmPins.forEach(function(bcmPin) {
-            context('writing to invalid BCM pin ' + bcmPin, function() {
+          invalidBcmPins.forEach((bcmPin) => {
+            context('writing to invalid BCM pin ' + bcmPin, () => {
               let callback;
 
-              beforeEach(function() {
+              beforeEach(() => {
                 callback = sandbox.spy();
                 return gpioPromise.setup(bcmPin, gpio.DIR_IN)
                   .catch(callback);
               });
 
-              it('should run the callback with an error', function() {
+              it('should run the callback with an error', () => {
                 sinon.assert.calledOnce(callback);
                 assert.ok(callback.getCall(0).args[0]);
               });
@@ -842,12 +842,12 @@ describe('rpi-gpio', function() {
     });
   });
 
-  describe('promise', function () {
-    describe('setup()', function () {
-      context('when given an invalid channel', function () {
+  describe('promise', () => {
+    describe('setup()', () => {
+      context('when given an invalid channel', () => {
         let callback;
 
-        beforeEach(function (done) {
+        beforeEach((done) => {
           callback = sandbox.spy(onSetupComplete);
           function onSetupComplete() {
             done();
@@ -856,16 +856,16 @@ describe('rpi-gpio', function() {
           gpioPromise.setup(null, null).catch(callback);
         });
 
-        it('should run the callback with an error', function () {
+        it('should run the callback with an error', () => {
           sinon.assert.calledOnce(callback);
           assert.ok(callback.getCall(0).args[0]);
         });
       });
 
-      context('when given a valid channel', function () {
+      context('when given a valid channel', () => {
         let callback;
 
-        beforeEach(function (done) {
+        beforeEach((done) => {
           callback = sandbox.spy(onSetupComplete);
           function onSetupComplete() {
             done();
@@ -874,15 +874,15 @@ describe('rpi-gpio', function() {
           gpioPromise.setup(7).then(callback);
         });
 
-        it('should run the callback successfully', function () {
+        it('should run the callback successfully', () => {
           sinon.assert.calledOnce(callback);
         });
       });
 
-      context('when CPU revision is invalid', function () {
+      context('when CPU revision is invalid', () => {
         let catchCallback;
 
-        beforeEach(function (done) {
+        beforeEach((done) => {
           catchCallback = sandbox.spy(onSetupComplete);
           fs.readFile.withArgs('/proc/cpuinfo').yieldsAsync(null, getCpuInfo('A Bad Revision'));
           function onSetupComplete() {
@@ -892,28 +892,28 @@ describe('rpi-gpio', function() {
           gpioPromise.setup(7).catch(catchCallback);
         });
 
-        it('should catch the error successfully', function () {
+        it('should catch the error successfully', () => {
           sinon.assert.calledOnce(catchCallback);
         });
       });
     });
   });
 
-  describe('write()', function () {
-    context('when pin 7 has been setup for output', function () {
+  describe('write()', () => {
+    context('when pin 7 has been setup for output', () => {
       let onSetup;
 
-      beforeEach(function (done) {
+      beforeEach((done) => {
         onSetup = sandbox.spy(done);
         gpioPromise.setup(7, gpio.DIR_OUT).then(onSetup);
       });
 
-      context('and pin 7 is written to with boolean true', function () {
-        beforeEach(function (done) {
+      context('and pin 7 is written to with boolean true', () => {
+        beforeEach((done) => {
           gpioPromise.write(7, true).then(done);
         });
 
-        it('should write the value to the file system', function () {
+        it('should write the value to the file system', () => {
           const args = fs.writeFile.lastCall.args;
           assert.equal(args[0], PATH + '/gpio7/value');
           assert.equal(args[1], '1');
@@ -924,28 +924,28 @@ describe('rpi-gpio', function() {
     });
   });
 
-  describe('read()', function () {
-    context('when pin 7 is setup for input', function () {
-      beforeEach(function () {
+  describe('read()', () => {
+    context('when pin 7 is setup for input', () => {
+      beforeEach(() => {
         return gpioPromise.setup(7, gpio.DIR_IN);
       });
 
-      context('and pin 7 is on', function () {
-        beforeEach(function () {
+      context('and pin 7 is on', () => {
+        beforeEach(() => {
           fs.readFile.yieldsAsync(null, '1');
         });
 
-        context('and pin 7 is read', function () {
+        context('and pin 7 is read', () => {
           let promise;
 
-          beforeEach(function () {
+          beforeEach(() => {
             promise = gpioPromise.read(7);
           });
 
-          it('should run the callback with a value boolean true', function () {
+          it('should run the callback with a value boolean true', () => {
             const args = fs.readFile.lastCall.args;
             assert.equal(args[0], PATH + '/gpio7/value');
-            promise.then(function (result) {
+            promise.then((result) => {
               assert.ok(result);
             });
           });
@@ -954,14 +954,14 @@ describe('rpi-gpio', function() {
     });
   });
 
-  describe('destroy', function () {
-    context('when pins 7, 8 and 10 have been exported', function () {
+  describe('destroy', () => {
+    context('when pins 7, 8 and 10 have been exported', () => {
       const unexportPath = PATH + '/unexport';
 
-      beforeEach(function (done) {
+      beforeEach((done) => {
         let i = 3;
-        [7, 8, 10].forEach(function (pin) {
-          gpioPromise.setup(pin, gpio.DIR_IN).then(function () {
+        [7, 8, 10].forEach((pin) => {
+          gpioPromise.setup(pin, gpio.DIR_IN).then(() => {
             if (--i === 0) {
               done();
             }
@@ -969,43 +969,43 @@ describe('rpi-gpio', function() {
         });
       });
 
-      it('should have created 3 listeners', function () {
+      it('should have created 3 listeners', () => {
         assert.equal(listeners.length, 3);
       });
 
-      context('and destroy() is run', function () {
+      context('and destroy() is run', () => {
 
-        beforeEach(function (done) {
+        beforeEach((done) => {
           gpioPromise.destroy().then(done);
         });
 
-        it('should unexport pin 7', function () {
+        it('should unexport pin 7', () => {
           sinon.assert.calledWith(fs.writeFile, unexportPath, '7');
         });
 
-        it('should unexport pin 8', function () {
+        it('should unexport pin 8', () => {
           sinon.assert.calledWith(fs.writeFile, unexportPath, '8');
         });
 
-        it('should unexport pin 10', function () {
+        it('should unexport pin 10', () => {
           sinon.assert.calledWith(fs.writeFile, unexportPath, '10');
         });
 
-        it('should unwatch pin 7', function () {
+        it('should unwatch pin 7', () => {
           const listener = listeners[0];
           sinon.assert.calledOnce(listener.remove);
           sinon.assert.calledWith(listener.remove, 'fakeFd');
           sinon.assert.calledOnce(listener.close);
         });
 
-        it('should unwatch pin 8', function () {
+        it('should unwatch pin 8', () => {
           const listener = listeners[1];
           sinon.assert.calledOnce(listener.remove);
           sinon.assert.calledWith(listener.remove, 'fakeFd');
           sinon.assert.calledOnce(listener.close);
         });
 
-        it('should unwatch pin 9', function () {
+        it('should unwatch pin 9', () => {
           const listener = listeners[2];
           sinon.assert.calledOnce(listener.remove);
           sinon.assert.calledWith(listener.remove, 'fakeFd');

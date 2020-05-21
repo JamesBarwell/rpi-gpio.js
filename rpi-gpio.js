@@ -160,7 +160,7 @@ function Gpio() {
     onSetup = onSetup || function() {};
 
     if (typeof channel !== 'number') {
-      return process.nextTick(function() {
+      return process.nextTick(() => {
         onSetup(new Error('Channel must be a number'));
       });
     }
@@ -170,7 +170,7 @@ function Gpio() {
             direction !== this.DIR_LOW &&
             direction !== this.DIR_HIGH
     ) {
-      return process.nextTick(function() {
+      return process.nextTick(() => {
         onSetup(new Error('Cannot set invalid direction'));
       });
     }
@@ -181,7 +181,7 @@ function Gpio() {
       this.EDGE_FALLING,
       this.EDGE_BOTH,
     ].indexOf(edge) == -1) {
-      return process.nextTick(function() {
+      return process.nextTick(() => {
         onSetup(new Error('Cannot set invalid edge'));
       });
     }
@@ -189,7 +189,7 @@ function Gpio() {
     let pinForSetup;
 
     const onListen = function(readChannel) {
-      this.read(readChannel, function(err, value) {
+      this.read(readChannel, (err, value) => {
         if (err) {
           debug(
             'Error reading channel value after change, %d',
@@ -203,11 +203,11 @@ function Gpio() {
           value,
         );
         this.emit('change', readChannel, value);
-      }.bind(this));
+      });
     }.bind(this);
 
     setRaspberryVersion()
-      .then(function() {
+      .then(() => {
         pinForSetup = getPinForCurrentMode(channel);
         if (!pinForSetup) {
           throw new Error(
@@ -217,37 +217,37 @@ function Gpio() {
         debug('set up pin %d', pinForSetup);
         return isExported(pinForSetup);
       })
-      .then(function(isExported) {
+      .then((isExported) => {
         if (isExported) {
           return unexportPin(pinForSetup);
         }
       })
-      .then(function() {
+      .then(() => {
         return exportPin(pinForSetup);
       })
-      .then(function() {
-        return retry(function() {
+      .then(() => {
+        return retry(() => {
           return setEdge(pinForSetup, edge);
         }, RETRY_OPTS);
       })
-      .then(function() {
+      .then(() => {
         if (direction === DIR_IN) {
           exportedInputPins[pinForSetup] = true;
         } else {
           exportedOutputPins[pinForSetup] = true;
         }
 
-        return retry(function() {
+        return retry(() => {
           return setDirection(pinForSetup, direction);
         }, RETRY_OPTS);
       })
-      .then(function() {
+      .then(() => {
         listen(channel, onListen);
       })
-      .then(function() {
+      .then(() => {
         onSetup();
       })
-      .catch(function(err) {
+      .catch((err) => {
         onSetup(err);
       });
   };
@@ -264,7 +264,7 @@ function Gpio() {
     cb = cb || function() {};
 
     if (!exportedOutputPins[pin]) {
-      return process.nextTick(function() {
+      return process.nextTick(() => {
         cb(new Error('Pin has not been exported for write'));
       });
     }
@@ -289,7 +289,7 @@ function Gpio() {
     const pin = getPinForCurrentMode(channel);
 
     if (!exportedInputPins[pin] && !exportedOutputPins[pin]) {
-      return process.nextTick(function() {
+      return process.nextTick(() => {
         cb(new Error('Pin has not been exported'));
       });
     }
@@ -312,8 +312,8 @@ function Gpio() {
   this.destroy = function(cb) {
     const tasks = Object.keys(exportedOutputPins)
       .concat(Object.keys(exportedInputPins))
-      .map(function(pin) {
-        return new Promise(function(resolve, reject) {
+      .map((pin) => {
+        return new Promise((resolve, reject) => {
           removeListener(pin, pollers);
           unexportPin(pin)
             .then(resolve)
@@ -322,10 +322,10 @@ function Gpio() {
       });
 
     Promise.all(tasks)
-      .then(function() {
+      .then(() => {
         return cb();
       })
-      .catch(function(err) {
+      .catch((err) => {
         return cb(err);
       });
   };
@@ -355,8 +355,8 @@ function Gpio() {
       return Promise.resolve();
     }
 
-    return new Promise(function(resolve, reject) {
-      fs.readFile('/proc/cpuinfo', 'utf8', function(err, data) {
+    return new Promise((resolve, reject) => {
+      fs.readFile('/proc/cpuinfo', 'utf8', (err, data) => {
         if (err) {
           return reject(err);
         }
@@ -382,7 +382,7 @@ function Gpio() {
         // This will be used to validate channel numbers in getPinBcm
         currentValidBcmPins = [];
         Object.keys(PINS[pinVersion]).forEach(
-          function(pin) {
+          (pin) => {
             // Lookup the BCM pin for the RPI pin and add it to the list
             currentValidBcmPins.push(PINS[pinVersion][pin]);
           },
@@ -418,7 +418,7 @@ function Gpio() {
     }
 
     debug('listen for pin %d', pin);
-    const poller = new Epoll(function(err, innerfd) {
+    const poller = new Epoll((err, innerfd) => {
       if (err) throw err;
       clearInterrupt(innerfd);
       onChange(channel);
@@ -428,7 +428,7 @@ function Gpio() {
     clearInterrupt(fd);
     poller.add(fd, Epoll.EPOLLPRI);
     // Append ready-to-use remove function
-    pollers[pin] = function() {
+    pollers[pin] = () => {
       poller.remove(fd).close();
     };
   }
@@ -437,8 +437,8 @@ util.inherits(Gpio, EventEmitter);
 
 function setEdge(pin, edge) {
   debug('set edge %s on pin %d', edge.toUpperCase(), pin);
-  return new Promise(function(resolve, reject) {
-    fs.writeFile(PATH + '/gpio' + pin + '/edge', edge, function(err) {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(PATH + '/gpio' + pin + '/edge', edge, (err) => {
       if (err) {
         return reject(err);
       }
@@ -449,8 +449,8 @@ function setEdge(pin, edge) {
 
 function setDirection(pin, direction) {
   debug('set direction %s on pin %d', direction.toUpperCase(), pin);
-  return new Promise(function(resolve, reject) {
-    fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, function(err) {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(PATH + '/gpio' + pin + '/direction', direction, (err) => {
       if (err) {
         return reject(err);
       }
@@ -461,8 +461,8 @@ function setDirection(pin, direction) {
 
 function exportPin(pin) {
   debug('export pin %d', pin);
-  return new Promise(function(resolve, reject) {
-    fs.writeFile(PATH + '/export', pin, function(err) {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(PATH + '/export', pin, (err) => {
       if (err) {
         return reject(err);
       }
@@ -473,8 +473,8 @@ function exportPin(pin) {
 
 function unexportPin(pin) {
   debug('unexport pin %d', pin);
-  return new Promise(function(resolve, reject) {
-    fs.writeFile(PATH + '/unexport', pin, function(err) {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(PATH + '/unexport', pin, (err) => {
       if (err) {
         return reject(err);
       }
@@ -484,8 +484,8 @@ function unexportPin(pin) {
 }
 
 function isExported(pin) {
-  return new Promise(function(resolve) {
-    fs.exists(PATH + '/gpio' + pin, function(exists) {
+  return new Promise((resolve) => {
+    fs.exists(PATH + '/gpio' + pin, (exists) => {
       return resolve(exists);
     });
   });
@@ -529,7 +529,7 @@ GPIO.promise = {
      * @returns {Promise}
      */
   setup: function (channel, direction, edge) {
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
       function done(error) {
         if (error) return reject(error);
         resolve();
@@ -546,7 +546,7 @@ GPIO.promise = {
      * @returns {Promise}
      */
   write: function (channel, value) {
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
       function done(error) {
         if (error) return reject(error);
         resolve();
@@ -562,7 +562,7 @@ GPIO.promise = {
      * @returns {Promise}
      */
   read: function (channel) {
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
       function done(error, result) {
         if (error) return reject(error);
         resolve(result);
@@ -577,7 +577,7 @@ GPIO.promise = {
      * @returns {Promise}
      */
   destroy: function () {
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
       function done(error) {
         if (error) return reject(error);
         resolve();
