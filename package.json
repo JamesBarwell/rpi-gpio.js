@@ -20,6 +20,7 @@
   },
   "scripts": {
     "test": "mocha",
+    "test-watch": "mocha -w",
     "spec": "mocha --reporter spec",
     "coverage": "nyc npm run test",
     "int": "mocha test/integration",
