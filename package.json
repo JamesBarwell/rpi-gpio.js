@@ -13,6 +13,7 @@
     "integration": "integration"
   },
   "devDependencies": {
+    "eslint": "^6.8.0",
     "istanbul": "^0.4.5",
     "mocha": "^5.2.0",
     "sinon": "^7.4.2"
@@ -21,7 +22,9 @@
     "test": "mocha",
     "spec": "mocha --reporter spec",
     "coverage": "istanbul cover _mocha",
-    "int": "mocha test/integration"
+    "int": "mocha test/integration",
+    "lint": "eslint rpi-gpio.js test",
+    "lint-fix": "eslint rpi-gpio.js test --fix"
   },
   "repository": {
     "type": "git",
