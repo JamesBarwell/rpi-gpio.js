@@ -1,7 +1,6 @@
 const fs           = require('fs');
 const util         = require('util');
 const EventEmitter = require('events').EventEmitter;
-const retry        = require('async-retry');
 const debug        = require('debug')('rpi-gpio');
 const Epoll        = require('epoll').Epoll;
 
@@ -79,12 +78,6 @@ const PINS = {
     // 39: ground
     '40': 21,
   },
-};
-
-const RETRY_OPTS = {
-  retries: 100,
-  minTimeout: 10,
-  factor: 1,
 };
 
 const DIR_IN   = 'in';
@@ -189,7 +182,7 @@ function Gpio() {
 
     await retry(() => {
       return setEdge(pinForSetup, edge);
-    }, RETRY_OPTS);
+    });
 
     if (direction === DIR_IN) {
       exportedInputPins[pinForSetup] = true;
@@ -199,7 +192,7 @@ function Gpio() {
 
     await retry(() => {
       return setDirection(pinForSetup, direction);
-    }, RETRY_OPTS);
+    });
 
     await listen(channel, async (readChannel) => {
       try {
@@ -412,6 +405,23 @@ function removeListener(pin, pollers) {
 
 async function clearInterrupt(fd) {
   return util.promisify(fs.read)(fd, Buffer.alloc(1), 0, 1, 0);
+}
+
+function timeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function retry(func) {
+  let i = 0;
+  let succeeded = false;
+  while (i++ < 100 && !succeeded) {
+    try {
+      await func(),
+      succeeded = true;
+    } catch(err) {
+      await timeout(10);
+    }
+  }
 }
 
 const GPIO = new Gpio();
