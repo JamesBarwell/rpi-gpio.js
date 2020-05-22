@@ -5,59 +5,6 @@ const retry        = require('async-retry');
 const debug        = require('debug')('rpi-gpio');
 const Epoll        = require('epoll').Epoll;
 
-const fsExists = (path) => {
-  return new Promise((resolve) => {
-    fs.exists(path, (data) => {
-      resolve(data);
-    });
-  });
-}
-
-const fsRead = (fd, buffer, offset, length, position) => {
-  return new Promise((resolve, reject) => {
-    fs.read(fd, buffer, offset, length, position, (err, data) => {
-      if (err) {
-        return reject(err);
-      }
-      resolve(data);
-    });
-  });
-}
-
-const fsOpen = (path, flags) => {
-  return new Promise((resolve, reject) => {
-    fs.open(path, flags, (err, data) => {
-      if (err) {
-        return reject(err);
-      }
-      resolve(data);
-    });
-  });
-}
-
-const fsReadFile = (path, mode) => {
-  return new Promise((resolve, reject) => {
-    fs.readFile(path, mode, (err, data) => {
-      if (err) {
-        return reject(err);
-      }
-      resolve(data);
-    });
-  });
-}
-
-const fsWriteFile = (path, value) => {
-  return new Promise((resolve, reject) => {
-    fs.writeFile(path, value, (err) => {
-      if (err) {
-        return reject(err);
-      }
-      resolve();
-    });
-  });
-}
-
-
 const PATH = '/sys/class/gpio';
 const PINS = {
   v1: {
@@ -288,7 +235,7 @@ function Gpio() {
     value = (!!value && value !== '0') ? '1' : '0';
 
     debug('writing pin %d with value %s', pin, value);
-    fsWriteFile(PATH + '/gpio' + pin + '/value', value);
+    util.promisify(fs.writeFile)(PATH + '/gpio' + pin + '/value', value);
   };
 
   /**
@@ -303,7 +250,7 @@ function Gpio() {
       throw new Error('Pin has not been exported');
     }
 
-    let data = await fsReadFile(PATH + '/gpio' + pin + '/value', 'utf-8');
+    let data = await util.promisify(fs.readFile)(PATH + '/gpio' + pin + '/value', 'utf-8');
     data = (data + '').trim() || '0';
     debug('read pin %s with value %s', pin, data);
     return data === '1';
@@ -352,7 +299,7 @@ function Gpio() {
       return;
     }
 
-    const data = await fsReadFile('/proc/cpuinfo', 'utf8');
+    const data = await util.promisify(fs.readFile)('/proc/cpuinfo', 'utf8');
 
     // Match the last 4 digits of the number following "Revision:"
     const match = data.match(/Revision\s*:\s*[0-9a-f]*([0-9a-f]{4})/);
@@ -414,7 +361,7 @@ function Gpio() {
         });
     });
 
-    const fd = await fsOpen(PATH + '/gpio' + pin + '/value', 'r+');
+    const fd = await util.promisify(fs.open)(PATH + '/gpio' + pin + '/value', 'r+');
     clearInterrupt(fd);
     poller.add(fd, Epoll.EPOLLPRI);
     // Append ready-to-use remove function
@@ -427,26 +374,31 @@ util.inherits(Gpio, EventEmitter);
 
 async function setEdge(pin, edge) {
   debug('set edge %s on pin %d', edge.toUpperCase(), pin);
-  await fsWriteFile(PATH + '/gpio' + pin + '/edge', edge);
+  await util.promisify(fs.writeFile)(PATH + '/gpio' + pin + '/edge', edge);
 }
 
 async function setDirection(pin, direction) {
   debug('set direction %s on pin %d', direction.toUpperCase(), pin);
-  await fsWriteFile(PATH + '/gpio' + pin + '/direction', direction);
+  await util.promisify(fs.writeFile)(PATH + '/gpio' + pin + '/direction', direction);
 }
 
 async function exportPin(pin) {
   debug('export pin %d', pin);
-  fsWriteFile(PATH + '/export', pin);
+  util.promisify(fs.writeFile)(PATH + '/export', pin);
 }
 
 async function unexportPin(pin) {
   debug('unexport pin %d', pin);
-  fsWriteFile(PATH + '/unexport', pin);
+  util.promisify(fs.writeFile)(PATH + '/unexport', pin);
 }
 
 async function isExported(pin) {
-  return fsExists(PATH + '/gpio' + pin);
+  try {
+    await util.promisify(fs.access)(PATH + '/gpio' + pin);
+    return true;
+  } catch (err) {
+    return false;
+  }
 }
 
 function removeListener(pin, pollers) {
@@ -459,7 +411,7 @@ function removeListener(pin, pollers) {
 }
 
 async function clearInterrupt(fd) {
-  return fsRead(fd, Buffer.alloc(1), 0, 1, 0);
+  return util.promisify(fs.read)(fd, Buffer.alloc(1), 0, 1, 0);
 }
 
 const GPIO = new Gpio();

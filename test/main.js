@@ -33,7 +33,7 @@ function getCpuInfo(revision) {
 describe('rpi-gpio', () => {
   beforeEach(() => {
     sandbox.stub(fs, 'writeFile').yieldsAsync();
-    sandbox.stub(fs, 'exists').yieldsAsync(false);
+    sandbox.stub(fs, 'access').yieldsAsync(true);
     sandbox.stub(fs, 'open').yieldsAsync(null, 'fakeFd');
     sandbox.stub(fs, 'read');
     sandbox.stub(fs, 'readFile')
@@ -140,7 +140,7 @@ describe('rpi-gpio', () => {
 
     context('when the channel is already exported', () => {
       beforeEach(() => {
-        fs.exists.yieldsAsync(true);
+        fs.access.yieldsAsync();
         return gpio.setup(7, null);
       });
 
@@ -160,7 +160,7 @@ describe('rpi-gpio', () => {
 
     context('when the channel is not already exported', () => {
       beforeEach(() => {
-        fs.exists.yieldsAsync(false);
+        fs.access.yieldsAsync(true);
       });
 
       context('and minimum arguments are specified', () => {
