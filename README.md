@@ -33,6 +33,36 @@ Please use 3.x unless you need to run with an old version of node. Older version
 | 12           | No           | Yes            | Yes            |
 | 14           | No           | Yes            | Yes            |
 
+## Upgrading to 3.x
+
+Please read if you are already using this module in your project, else please skip to the next section.
+
+This project has long supported a traditional callback or "error-first" API (i.e. same as the node library), and an additional Promises API layer. From 3.x onwards, the Promises API will be the primary way of interacting with the module. The callback API will be available but deprecated.
+
+Previously, the callback API was available by calling methods directly on the module, and the Promises API was available on a nested object:
+```
+var gpio = require('rpi-gpio');
+
+// callback style
+gpio.setup(7, function(err) { });
+
+// promises style
+await gpio.promise.setup(7);
+```
+
+From 3.x, this is reversed. The Promises API is available directly on the module, and the callback API is available as a compatibility layer:
+```
+var gpio = require('rpi-gpio');
+
+// promises style
+await gpio.setup(7);
+
+// callback style
+gpio.callback.setup(7, function(err) { });
+```
+
+The callback style is supported in version 3.x, but will probably be dropped in a future major version.
+
 ## Setup and install
 
 See this guide on how to get [node.js running on Raspberry Pi](http://thisdavej.com/beginners-guide-to-installing-node-js-on-a-raspberry-pi/#install-node).
@@ -59,7 +89,9 @@ Please note that this is not a Typescript project and the definitions are indepe
 ## Usage
 Before you can read or write, you must use `setup()` to open a channel, and must specify whether it will be used for input or output. Having done this, you can then read in the state of the channel or write a value to it using `read()` or `write()`.
 
-All of the functions relating to the pin state within this module are asynchronous, so where necessary - for example in reading the value of a channel - a callback must be provided. This module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use its functions to listen to events.
+All of the functions relating to the pin state within this module are asynchronous and rely on Promises. So for example, in reading the value of a channel, you need to either use `await` or `.then()` on the object returned. In addition, this module inherits the standard [EventEmitter](http://nodejs.org/api/events.html), so you may use the standard callback bindings to listen to pin change events.
+
+Please see the Examples for more information.
 
 ### Pin naming
 Please be aware that there are multiple ways of referring to the pins on the Raspberry Pi. The simplest and default way to use the module is refer to them by physical position, using the diagrams on [this page](http://elinux.org/RPi_Low-level_peripherals). So holding the Raspberry Pi such that the GPIO header runs down the upper-right side of the board, if you wished to address GPIO4 (which is in column 1 and row 4), you would setup pin 7. If you wish instead to refer to the pins by their GPIO names (known as BCM naming), you can use the `setMode` command described in the API documentation below.
@@ -68,30 +100,28 @@ Please be aware that there are multiple ways of referring to the pins on the Ras
 This module will work without use of the `sudo` command, as long as the user running the node process belongs to the `gpio` group. You can check the current user's groups by running the command `groups`, or `groups <user>` for another user. If you are not already a member of the `gpio` group, you can add yourself or another user by running `sudo adduser <user> gpio`.
 
 
-## API (Error-first)
+## API
 
-The default API uses the node-style error-first callbacks to perform asynchronous functions. Most of these methods take a callback, and that callback should check for an error in its first argument. It is important to check for an error after each command, else your code will continue to run and will likely fail in hard to understand ways.
+The default API uses Promises, to make asynchronous interaction easier.
 
 ### Methods
 
-#### setup(channel [, direction, edge], callback)
+#### setup(channel [, direction, edge])
 Sets up a channel for read or write. Must be done before the channel can be used.
 * channel: Reference to the pin in the current mode's schema.
 * direction: The pin direction, pass either DIR_IN for read mode or DIR_OUT for write mode. You can also pass DIR_LOW or DIR_HIGH to use the write mode and specify an initial state of 'off' or 'on' respectively. Defaults to DIR_OUT.
 * edge: Interrupt generating GPIO chip setting, pass in EDGE_NONE for no interrupts, EDGE_RISING for interrupts on rising values, EDGE_FALLING for interrupts on falling values or EDGE_BOTH for all interrupts.
 Defaults to EDGE_NONE.
-* callback: Provides Error as the first argument if an error occurred.
 
 #### read(channel, callback)
 Reads the value of a channel.
 * channel: Reference to the pin in the current mode's schema.
-* callback: Provides Error as the first argument if an error occured, otherwise the pin value boolean as the second argument.
+* Returns: pin value, as a boolean.
 
-#### write(channel, value [, callback])
+#### write(channel, value)
 Writes the value of a channel.
 * channel: Reference to the pin in the current mode's schema.
 * value: Boolean value to specify whether the channel will turn on or off.
-* callback: Provides Error as the first argument if an error occured.
 
 #### setMode(mode)
 Sets the channel addressing schema.
@@ -107,7 +137,7 @@ Alias of write().
 Tears down any previously set up channels. Should be run when your program stops, or needs to reset the state of the pins.
 
 #### reset()
-Tears down the module state - used for testing.
+Tears down the module state - used for internal testing.
 
 ### Events
 See Node [EventEmitter](http://nodejs.org/api/events.html) for documentation on listening to events.
@@ -117,24 +147,24 @@ Emitted when the value of a channel changed
 * channel
 * value
 
-## API (Promises)
+## API (callback, error-first)
 
-This API exposes a Promises interface to the module. All of the same functions are available, but do not take callbacks and instead return a Promise.
+This API is depreacted, and is provided for compatibility reasons. New projects should not use it, and old projects should plan to switch to the Promises API.
 
-The Promises interface is available in the `promise` namespace, e.g.:
+This was the old interface in versions 1.x and 2.x. It is identical to the Promises API, but an extra callback argument must be passed in at the end of each function. This API is the same as the node library, i.e. the callback will always receive either an error as its first argument, or the successful result as its second argument. If using this API, it is important to check for an error after each command, else your code will continue to run and will likely fail in hard to understand ways.
+
+The Callback interface is available in the `callback` namespace, e.g.:
 
 ```js
-var gpiop = require('rpi-gpio').promise;
+var gpioc = require('rpi-gpio').callback;
 
-gpiop.setup(7, gpiop.DIR_OUT)
-    .then(() => {
-        return gpiop.write(7, true)
-    })
-    .catch((err) => {
-        console.log('Error: ', err.toString())
-    })
+gpioc.setup(7, gpiop.DIR_OUT, (err) => {
+  if (err) throw err;
+  gpioc.write(7, true, (err) => {
+    if (err) throw err;
+  })
+});
 ```
-
 
 ## Examples
 
