@@ -585,7 +585,14 @@ GPIO.promise = {
 
             GPIO.destroy(done)
         })
-    }
+    },
+
+    on: GPIO.on.bind(GPIO),
+    once: GPIO.once.bind(GPIO),
+    off: GPIO.off.bind(GPIO),
+    addListener: GPIO.addListener.bind(GPIO),
+    removeListener: GPIO.removeListener.bind(GPIO),
+    removeAllListeners: GPIO.removeAllListeners.bind(GPIO),
 };
 
 module.exports = GPIO;
