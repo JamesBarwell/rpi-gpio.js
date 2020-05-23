@@ -1,19 +1,24 @@
-var gpio = require('../rpi-gpio');
+const gpio = require('../rpi-gpio');
 
 gpio.on('export', function(channel) {
-    console.log('Channel set: ' + channel);
+  console.log('Channel set: ' + channel);
 });
 
-gpio.setup(7, gpio.DIR_OUT);
-gpio.setup(15, gpio.DIR_OUT);
-gpio.setup(16, gpio.DIR_OUT, pause);
-
-function pause() {
-    setTimeout(closePins, 2000);
+function timeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function closePins() {
-    gpio.destroy(function() {
-        console.log('All pins unexported');
-    });
+async function main() {
+  await Promise.all([
+    gpio.setup(7, gpio.DIR_OUT),
+    gpio.setup(15, gpio.DIR_OUT),
+    gpio.setup(16, gpio.DIR_OUT),
+  ]);
+
+  await timeout(2000);
+
+  await gpio.destroy();
+  console.log('All pins unexported');
 }
+
+main();

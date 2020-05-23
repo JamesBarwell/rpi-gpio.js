@@ -24,8 +24,8 @@
     "spec": "mocha --reporter spec",
     "coverage": "nyc npm run test",
     "int": "mocha test/integration",
-    "lint": "eslint rpi-gpio.js test",
-    "lint-fix": "eslint rpi-gpio.js test --fix"
+    "lint": "eslint rpi-gpio.js test examples",
+    "lint-fix": "eslint rpi-gpio.js test examples --fix"
   },
   "repository": {
     "type": "git",
