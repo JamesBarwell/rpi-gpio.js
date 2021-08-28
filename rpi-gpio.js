@@ -417,6 +417,9 @@ function Gpio() {
     };
 
     function getPinRpi(channel) {
+        if (!currentPins[channel])
+            return undefined;
+
         return currentPins[channel] + '';
     };
 
