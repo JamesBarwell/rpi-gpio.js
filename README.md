@@ -3,6 +3,11 @@ rpi-gpio.js
 
 Control Raspberry Pi GPIO pins with node.js
 
+## A note on support
+
+Please note that this project is not actively supported at present, due to real-life priorities and a lack of hardware to reliably test. It is unlikely that issues or pull requests will be dealt with for the forseeable future. This project was created in the early days of the Raspberry Pi and since then many others have sprung up, which you may have better luck with. Alternatively, as an open source project, please feel free to fork the project if it doesn't meet your needs.
+
+
 [![Build Status](https://travis-ci.org/JamesBarwell/rpi-gpio.js.svg?branch=master)](https://travis-ci.org/JamesBarwell/rpi-gpio.js)
 [![NPM version](https://badge.fury.io/js/rpi-gpio.svg)](http://badge.fury.io/js/rpi-gpio)
 
