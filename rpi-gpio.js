@@ -242,7 +242,9 @@ function Gpio() {
                 }, RETRY_OPTS);
             })
             .then(function() {
-                listen(channel, onListen);
+                return retry(function() {
+                   return listen(channel, onListen);
+                }, RETRY_OPTS);
             })
             .then(function() {
                 onSetup();
