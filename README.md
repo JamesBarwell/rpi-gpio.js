@@ -3,13 +3,17 @@ rpi-gpio.js
 
 Control Raspberry Pi GPIO pins with node.js
 
+[![Build Status](https://travis-ci.org/JamesBarwell/rpi-gpio.js.svg?branch=master)](https://travis-ci.org/JamesBarwell/rpi-gpio.js)
+[![NPM version](https://badge.fury.io/js/rpi-gpio.svg)](http://badge.fury.io/js/rpi-gpio)
+
 ## A note on support
 
 Please note that this project is not actively supported at present, due to real-life priorities and a lack of hardware to reliably test. It is unlikely that issues or pull requests will be dealt with for the forseeable future. This project was created in the early days of the Raspberry Pi and since then many others have sprung up, which you may have better luck with. Alternatively, as an open source project, please feel free to fork the project if it doesn't meet your needs.
 
+## Other libraries to consider
 
-[![Build Status](https://travis-ci.org/JamesBarwell/rpi-gpio.js.svg?branch=master)](https://travis-ci.org/JamesBarwell/rpi-gpio.js)
-[![NPM version](https://badge.fury.io/js/rpi-gpio.svg)](http://badge.fury.io/js/rpi-gpio)
+[fivdi/onoff](https://github.com/fivdi/onoff): GPIO access and interrupt detection with Node.js on Linux boards like the Raspberry Pi or BeagleBone.
+[gdorbes/rpi-io](https://github.com/gdorbes/rpi-io): rpi-io is a lite ESM module for Node.js to control Raspberry Pi GPIO: access (in, out), input event detection and PWM peripheral control.
 
 ## Supported hardware
 
